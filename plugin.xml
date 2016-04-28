@@ -2,7 +2,7 @@
 <plugin xmlns="http://www.phonegap.com/ns/plugins/1.0"
     xmlns:android="http://schemas.android.com/apk/res/android"
     id="com.phonegap.plugins.twilioclient"
-    version="1.0.7">
+    version="1.0.8">
 
     <name>TwilioClient</name>
     <description>Use the native Twilio Client for iOS or Android wtih Cordova/PhoneGap and the Twilio Client JavaScript API</description>
@@ -44,7 +44,7 @@
                 target-dir="libs/mips" />
         <source-file src="sdk/android/libs/x86/libtwilio-native.so"
                 target-dir="libs/x86" />
-        <source-file src="sdk/android/libs/twilioclient-android.jar"
+        <source-file src="sdk/android/libs/twilio-client-android.jar"
                 target-dir="libs" />
         <dependency id="android.support.v4" url="https://github.com/zckrs/cordova-plugin-android-support-v4.git" />
     </platform>
