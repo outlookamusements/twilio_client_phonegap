@@ -199,7 +199,7 @@ public class TCPlugin extends CordovaPlugin implements DeviceListener,
            switch(requestCode)
            {
                case 0:
-                   initTwilio(this.mInitDeviceSetupArgs);
+                   initTwilio(this.mInitCallbackContext);
                    break;
            }
        }
