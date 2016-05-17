@@ -189,9 +189,9 @@ public class TCPlugin extends CordovaPlugin implements DeviceListener,
            PluginResult result;
            for (int r : grantResults) {
                if (r == PackageManager.PERMISSION_DENIED) {
-                   Log.d(LOG_TAG, "Permission Denied!");
+                   Log.d(TAG, "Permission Denied!");
                    result = new PluginResult(PluginResult.Status.ILLEGAL_ACCESS_EXCEPTION);
-                   this.callbackContext.sendPluginResult(result);
+                   this.mInitCallbackContext.sendPluginResult(result);
                    return;
                }
            }
@@ -199,7 +199,7 @@ public class TCPlugin extends CordovaPlugin implements DeviceListener,
            switch(requestCode)
            {
                case 0:
-                   initTwilio(this.requestArgs);
+                   initTwilio(this.mInitDeviceSetupArgs);
                    break;
            }
        }
