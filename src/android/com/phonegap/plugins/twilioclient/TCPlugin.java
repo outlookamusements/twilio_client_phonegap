@@ -53,7 +53,11 @@ public class TCPlugin extends CordovaPlugin implements DeviceListener,
 
 	private final static String TAG = "TCPlugin";
 
-	private String [] permissions = { Manifest.permission.ACCESS_NETWORK_STATE, Manifest.permission.ACCESS_WIFI_STATE, Manifest.permission.RECORD_AUDIO, Manifest.permission.MODIFY_AUDIO_SETTINGS };
+	private String [] permissions = {
+	Manifest.permission.ACCESS_NETWORK_STATE,
+	Manifest.permission.ACCESS_WIFI_STATE,
+	Manifest.permission.RECORD_AUDIO,
+	Manifest.permission.MODIFY_AUDIO_SETTINGS };
 
 	private Device mDevice;
 	private Connection mConnection;
@@ -63,7 +67,7 @@ public class TCPlugin extends CordovaPlugin implements DeviceListener,
 	private String mCurrentNotificationText;
 	private TCPlugin plugin = this;
 
-	
+
 
 	private BroadcastReceiver mBroadcastReceiver = new BroadcastReceiver() {
 		@Override
@@ -74,22 +78,22 @@ public class TCPlugin extends CordovaPlugin implements DeviceListener,
 			Log.d(TAG, "incoming intent received with connection: "+ mConnection.getState().name());
 			String constate = mConnection.getState().name();
 			if(constate.equals("PENDING")) {
-				TCPlugin.this.javascriptCallback("onincoming", mInitCallbackContext);				
+				TCPlugin.this.javascriptCallback("onincoming", mInitCallbackContext);
 			}
 		}
 	};
 
 	/**
 	 * Android Cordova Action Router
-	 * 
+	 *
 	 * Executes the request.
-	 * 
+	 *
 	 * This method is called from the WebView thread. To do a non-trivial amount
 	 * of work, use: cordova.getThreadPool().execute(runnable);
-	 * 
+	 *
 	 * To run on the UI thread, use:
 	 * cordova.getActivity().runOnUiThread(runnable);
-	 * 
+	 *
 	 * @param action
 	 *            The action to execute.
 	 * @param args
@@ -102,10 +106,15 @@ public class TCPlugin extends CordovaPlugin implements DeviceListener,
 	public boolean execute(final String action, final JSONArray args,
 			final CallbackContext callbackContext) throws JSONException {
 		if ("deviceSetup".equals(action)) {
+            mInitCallbackContext = callbackContext;
+            mInitDeviceSetupArgs = args;
 			if (Twilio.isInitialized()) {
-				deviceSetup(args, callbackContext);
+                if(!hasPermisssion()) {
+                    requestPermissions(1);
+                } else {
+                    deviceSetup(args, callbackContext);
+                }
 			} else {
-				mInitDeviceSetupArgs = args;
 				initTwilio(callbackContext);
 			}
 			return true;
@@ -151,38 +160,25 @@ public class TCPlugin extends CordovaPlugin implements DeviceListener,
 			return true;
 		}
 
-		return false; 
+		return false;
 	}
 
 	 public boolean hasPermisssion() {
+           Log.d(TAG, "Checking permissions");
            for(String p : permissions)
            {
                if(!PermissionHelper.hasPermission(this, p))
                {
+                   Log.d(TAG, "No permission");
                    return false;
                }
            }
            return true;
        }
-
-        /**
-         * We override this so that we can access the permissions variable, which no longer exists in
-         * the parent class, since we can't initialize it reliably in the constructor!
-         *
-         * @param requestCode The code to get request action
-         */
        public void requestPermissions(int requestCode)
        {
            PermissionHelper.requestPermissions(this, requestCode, permissions);
        }
-
-       /**
-       * processes the result of permission request
-       *
-       * @param requestCode The code to get request action
-       * @param permissions The collection of permissions
-       * @param grantResults The result of grant
-       */
       public void onRequestPermissionResult(int requestCode, String[] permissions,
                                              int[] grantResults) throws JSONException
        {
@@ -201,19 +197,22 @@ public class TCPlugin extends CordovaPlugin implements DeviceListener,
                case 0:
                    initTwilio(this.mInitCallbackContext);
                    break;
+               case 1:
+                   deviceSetup(this.mInitDeviceSetupArgs, this.mInitCallbackContext);
+                   break;
+
            }
        }
 
 	/**
 	 * Initialize Twilio's client library - this is only necessary on Android,
-	 * 
+	 *
 	 */
 	private void initTwilio(CallbackContext callbackContext) {
         //android permission auto add
         if(!hasPermisssion()) {
             requestPermissions(0);
         } else {
-            mInitCallbackContext = callbackContext;
             Twilio.initialize(cordova.getActivity().getApplicationContext(), this);
         }
 	}
