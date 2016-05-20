@@ -49,6 +49,7 @@
                 target-dir="libs/arm64-v8a" />
         <source-file src="sdk/android/libs/twilio-client-android.jar"
                 target-dir="libs" />
+        <dependency id="cordova-plugin-compat" version="^1.0.0" />
         <!--<dependency id="android.support.v4" url="https://github.com/zckrs/cordova-plugin-android-support-v4.git" />-->
     </platform>
 
