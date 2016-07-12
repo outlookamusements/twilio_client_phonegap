@@ -2,18 +2,17 @@
 <plugin xmlns="http://www.phonegap.com/ns/plugins/1.0"
     xmlns:android="http://schemas.android.com/apk/res/android"
     id="com.phonegap.plugins.twilioclient"
-    version="1.0.12">
+    version="1.0.13">
     <name>TwilioClient</name>
     <description>Use the native Twilio Client for iOS or Android with Cordova/PhoneGap and the Twilio Client JavaScript API</description>
     <author>Stevie Graham/Lyle Pratt/Jeff Linwood/Ben Pedersen/Andrey Fuks</author>
     <license>Apache</license>
 
-    <js-module src="www/tcPlugin.js" name="TCPlugin">
-      <clobbers target="window.Twilio"/>
-    </js-module>
-
     <!-- android -->
     <platform name="android">
+        <js-module src="www/tcPlugin.js" name="TCPlugin">
+            <clobbers target="window.Twilio"/>
+        </js-module>
         <config-file target="AndroidManifest.xml" parent="/manifest">
                 <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
             <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
@@ -55,6 +54,9 @@
 
     <!-- ios -->
     <platform name="ios">
+        <js-module src="www/tcPlugin.js" name="TCPlugin">
+            <clobbers target="window.Twilio"/>
+        </js-module>
         <!-- Add the Twilio Client plugin to the iOS app's config.xml -->
         <config-file target="config.xml" parent="widget">
           <feature name="TCPlugin">
