@@ -50,7 +50,7 @@
 }
 
 -(void)device:(TCDevice *)device didReceivePresenceUpdate:(TCPresenceEvent *)presenceEvent {
-    NSNumber *available = [NSNumber numberWithBool:presenceEvent.isAvailable];
+    NSString *available = [NSString stringWithFormat:@"%d", presenceEvent.isAvailable];
     NSDictionary *object = [NSDictionary dictionaryWithObjectsAndKeys:presenceEvent.name, @"from", available, @"available", nil];
     [self javascriptCallback:@"onpresence" withArguments:object];
 }
@@ -96,6 +96,14 @@
     //self.device.disconnectSoundEnabled = NO;
 
     _timer = [NSTimer scheduledTimerWithTimeInterval:0.5 target:self selector:@selector(deviceStatusEvent) userInfo:nil repeats:YES];
+}
+
+-(void)reset:(CDVInvokedUrlCommand*)command {
+     if(self.device != nil) {
+         [self.device disconnectAll];
+         self.device.delegate = nil;
+         self.device = nil;
+     }
 }
 
 -(void)deviceStatusEvent {

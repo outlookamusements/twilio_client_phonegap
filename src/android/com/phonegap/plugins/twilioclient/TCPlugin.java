@@ -1,21 +1,6 @@
 package com.phonegap.plugins.twilioclient;
 
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
-
 import android.Manifest;
-
-import org.apache.cordova.CallbackContext;
-import org.apache.cordova.CordovaPlugin;
-import org.apache.cordova.PluginResult;
-import org.apache.cordova.PluginResult.Status;
-import org.apache.cordova.PermissionHelper;
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
-
-//import android.R;
 import android.app.Activity;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
@@ -29,7 +14,6 @@ import android.support.v4.app.NotificationCompat;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 
-
 import com.twilio.client.Connection;
 import com.twilio.client.ConnectionListener;
 import com.twilio.client.Device;
@@ -37,6 +21,20 @@ import com.twilio.client.DeviceListener;
 import com.twilio.client.PresenceEvent;
 import com.twilio.client.Twilio;
 import com.twilio.client.Twilio.InitListener;
+
+import org.apache.cordova.CallbackContext;
+import org.apache.cordova.CordovaPlugin;
+import org.apache.cordova.PluginResult;
+import org.apache.cordova.PluginResult.Status;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+
+//import android.R;
 
 /**
  * Twilio Client Plugin for Cordova/PhoneGap Targeted at version 2.9 for
@@ -53,12 +51,6 @@ public class TCPlugin extends CordovaPlugin implements DeviceListener,
 
 	private final static String TAG = "TCPlugin";
 
-	private String [] permissions = {
-	Manifest.permission.ACCESS_NETWORK_STATE,
-	Manifest.permission.ACCESS_WIFI_STATE,
-	Manifest.permission.RECORD_AUDIO,
-	Manifest.permission.MODIFY_AUDIO_SETTINGS };
-
 	private Device mDevice;
 	private Connection mConnection;
 	private CallbackContext mInitCallbackContext;
@@ -66,6 +58,10 @@ public class TCPlugin extends CordovaPlugin implements DeviceListener,
 	private int mCurrentNotificationId = 1;
 	private String mCurrentNotificationText;
 	private TCPlugin plugin = this;
+
+	// Marshmallow Permissions
+	public static final String RECORD_AUDIO = Manifest.permission.RECORD_AUDIO;
+	public static final int RECORD_AUDIO_REQ_CODE = 0;
 
 
 
@@ -78,22 +74,22 @@ public class TCPlugin extends CordovaPlugin implements DeviceListener,
 			Log.d(TAG, "incoming intent received with connection: "+ mConnection.getState().name());
 			String constate = mConnection.getState().name();
 			if(constate.equals("PENDING")) {
-				TCPlugin.this.javascriptCallback("onincoming", mInitCallbackContext);
+				TCPlugin.this.javascriptCallback("onincoming", mInitCallbackContext);				
 			}
 		}
 	};
 
 	/**
 	 * Android Cordova Action Router
-	 *
+	 * 
 	 * Executes the request.
-	 *
+	 * 
 	 * This method is called from the WebView thread. To do a non-trivial amount
 	 * of work, use: cordova.getThreadPool().execute(runnable);
-	 *
+	 * 
 	 * To run on the UI thread, use:
 	 * cordova.getActivity().runOnUiThread(runnable);
-	 *
+	 * 
 	 * @param action
 	 *            The action to execute.
 	 * @param args
@@ -106,16 +102,21 @@ public class TCPlugin extends CordovaPlugin implements DeviceListener,
 	public boolean execute(final String action, final JSONArray args,
 			final CallbackContext callbackContext) throws JSONException {
 		if ("deviceSetup".equals(action)) {
-            mInitCallbackContext = callbackContext;
-            mInitDeviceSetupArgs = args;
 			if (Twilio.isInitialized()) {
-                if(!hasPermisssion()) {
-                    requestPermissions(1);
-                } else {
-                    deviceSetup(args, callbackContext);
-                }
+				deviceSetup(args, callbackContext);
 			} else {
-				initTwilio(callbackContext);
+				mInitCallbackContext = callbackContext;
+				mInitDeviceSetupArgs = args;
+				if(cordova.hasPermission(RECORD_AUDIO))
+				{
+					initTwilio(callbackContext);
+				}
+				else
+				{
+					cordova.requestPermission(this, RECORD_AUDIO_REQ_CODE, RECORD_AUDIO);
+				}
+
+
 			}
 			return true;
 
@@ -158,63 +159,30 @@ public class TCPlugin extends CordovaPlugin implements DeviceListener,
 		} else if ("setSpeaker".equals(action)) {
 			setSpeaker(args,callbackContext);
 			return true;
-		}
+		} else if ("reset".equals(action)) {
+            reset();
+            return true;
+        }
 
-		return false;
+		return false; 
 	}
 
-	 public boolean hasPermisssion() {
-           Log.d(TAG, "Checking permissions");
-           for(String p : permissions)
-           {
-               if(!PermissionHelper.hasPermission(this, p))
-               {
-                   Log.d(TAG, "No permission");
-                   return false;
-               }
-           }
-           return true;
-       }
-       public void requestPermissions(int requestCode)
-       {
-           PermissionHelper.requestPermissions(this, requestCode, permissions);
-       }
-      public void onRequestPermissionResult(int requestCode, String[] permissions,
-                                             int[] grantResults) throws JSONException
-       {
-           PluginResult result;
-           for (int r : grantResults) {
-               if (r == PackageManager.PERMISSION_DENIED) {
-                   Log.d(TAG, "Permission Denied!");
-                   result = new PluginResult(PluginResult.Status.ILLEGAL_ACCESS_EXCEPTION);
-                   this.mInitCallbackContext.sendPluginResult(result);
-                   return;
-               }
-           }
-
-           switch(requestCode)
-           {
-               case 0:
-                   initTwilio(this.mInitCallbackContext);
-                   break;
-               case 1:
-                   deviceSetup(this.mInitDeviceSetupArgs, this.mInitCallbackContext);
-                   break;
-
-           }
-       }
+	private void reset() {
+         LocalBroadcastManager lbm = LocalBroadcastManager.getInstance(cordova.getActivity());
+            lbm.unregisterReceiver(mBroadcastReceiver);
+            cordova.getThreadPool().execute(new Runnable(){
+            	public void run() {
+            		mDevice.release();
+            	}
+         });
+     }
 
 	/**
 	 * Initialize Twilio's client library - this is only necessary on Android,
-	 *
+	 * 
 	 */
 	private void initTwilio(CallbackContext callbackContext) {
-        //android permission auto add
-        if(!hasPermisssion()) {
-            requestPermissions(0);
-        } else {
-            Twilio.initialize(cordova.getActivity().getApplicationContext(), this);
-        }
+		Twilio.initialize(cordova.getActivity().getApplicationContext(), this);
 	}
 
 	/**
@@ -233,9 +201,7 @@ public class TCPlugin extends CordovaPlugin implements DeviceListener,
 			Log.d("TCPlugin","Releasing device");
 			cordova.getThreadPool().execute(new Runnable(){
 				public void run() {
-                    if (mDevice != null) {
-				        mDevice.release();
-                    }
+					mDevice.release();
 				}
 			});
 			javascriptCallback("onoffline", callbackContext);
@@ -320,10 +286,8 @@ public class TCPlugin extends CordovaPlugin implements DeviceListener,
 	}
 	
 	private void disconnectAll(JSONArray arguments, CallbackContext callbackContext) {
-        if (mDevice != null) {
-            mDevice.disconnectAll();
-            callbackContext.success();
-        }
+		mDevice.disconnectAll();
+		callbackContext.success();
 	}
 	
 	private void acceptConnection(JSONArray arguments, CallbackContext callbackContext) {
@@ -539,7 +503,7 @@ public class TCPlugin extends CordovaPlugin implements DeviceListener,
 
 	@Override
 	public void onInitialized() {
-		Log.d(TAG, "Twilio Initialized");
+		Log.d(TAG, "Twilio Plugin Initialized");
 		deviceSetup(mInitDeviceSetupArgs, mInitCallbackContext);
 	}
 
@@ -632,7 +596,26 @@ public class TCPlugin extends CordovaPlugin implements DeviceListener,
 				.getActivity());
 		lbm.unregisterReceiver(mBroadcastReceiver);
 	}
-	
+
+
+	public void onRequestPermissionResult(int requestCode, String[] permissions,
+										  int[] grantResults) throws JSONException
+	{
+		for(int r:grantResults)
+		{
+			if(r == PackageManager.PERMISSION_DENIED)
+			{
+				mInitCallbackContext.sendPluginResult(new PluginResult(PluginResult.Status.ERROR, "Permission denied"));
+				return;
+			}
+		}
+		switch(requestCode)
+		{
+			case RECORD_AUDIO_REQ_CODE:
+				initTwilio(mInitCallbackContext);
+				break;
+		}
+	}
 
 	
 
