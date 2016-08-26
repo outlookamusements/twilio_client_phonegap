@@ -172,7 +172,9 @@ public class TCPlugin extends CordovaPlugin implements DeviceListener,
             lbm.unregisterReceiver(mBroadcastReceiver);
             cordova.getThreadPool().execute(new Runnable(){
             	public void run() {
-            		mDevice.release();
+            		if(mDevice != null){
+            		    mDevice.release();
+            		}
             	}
          });
      }
