@@ -184,12 +184,15 @@ public class TCPlugin extends CordovaPlugin implements DeviceListener,
 	 * 
 	 */
 	private void initTwilio(CallbackContext callbackContext) {
+	    AudioManager myAudioMgr = (AudioManager) cordova.getActivity().getApplicationContext().getSystemService(Context.AUDIO_SERVICE);
+        String nativeSampleRate = myAudioMgr.getProperty(AudioManager.PROPERTY_OUTPUT_SAMPLE_RATE);
+	    Log.d(TAG, "sample rate: "+ nativeSampleRate);
 		Twilio.initialize(cordova.getActivity().getApplicationContext(), this);
 	}
 
 	/**
 	 * Set up the Twilio device with a capability token
-	 * 
+	 *
 	 * @param arguments JSONArray with a Twilio capability token
 	 */
 	private void deviceSetup(JSONArray arguments,
@@ -214,10 +217,10 @@ public class TCPlugin extends CordovaPlugin implements DeviceListener,
 		Intent intent = new Intent(this.cordova.getActivity(), IncomingConnectionActivity.class);
 		PendingIntent pendingIntent = PendingIntent.getActivity(this.cordova.getActivity(), 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
 		mDevice.setIncomingIntent(pendingIntent);
-		
+
 		LocalBroadcastManager lbm = LocalBroadcastManager.getInstance(cordova.getActivity());
 		lbm.registerReceiver(mBroadcastReceiver, new IntentFilter(IncomingConnectionActivity.ACTION_NAME));
-		
+
 		// delay one second to give Twilio device a change to change status (similar to iOS plugin)
 		cordova.getThreadPool().execute(new Runnable(){
 				public void run() {
@@ -230,7 +233,7 @@ public class TCPlugin extends CordovaPlugin implements DeviceListener,
 				}
 			});
 	}
-            
+
 	private void deviceStatusEvent(CallbackContext callbackContext) {
 		if (mDevice == null) {
 			callbackContext.sendPluginResult(new PluginResult(
@@ -273,7 +276,7 @@ public class TCPlugin extends CordovaPlugin implements DeviceListener,
 		}
 		return map;
 	}
-	
+
 	// helper method to get a JSONObject from a Map of Strings
 	public JSONObject getJSONObject(Map<String, String> map) throws JSONException {
 		if (map == null) {
@@ -286,22 +289,22 @@ public class TCPlugin extends CordovaPlugin implements DeviceListener,
 		}
 		return json;
 	}
-	
+
 	private void disconnectAll(JSONArray arguments, CallbackContext callbackContext) {
 		mDevice.disconnectAll();
 		callbackContext.success();
 	}
-	
+
 	private void acceptConnection(JSONArray arguments, CallbackContext callbackContext) {
 		mConnection.accept();
-		callbackContext.success(); 
+		callbackContext.success();
 	}
-	
+
 	private void rejectConnection(JSONArray arguments, CallbackContext callbackContext) {
 		mConnection.reject();
-		callbackContext.success(); 
+		callbackContext.success();
 	}
-	
+
 	private void disconnectConnection(JSONArray arguments, CallbackContext callbackContext) {
 		mConnection.disconnect();
 		callbackContext.success();
@@ -316,7 +319,7 @@ public class TCPlugin extends CordovaPlugin implements DeviceListener,
 		}
 		mConnection.sendDigits(arguments.optString(0));
 	}
-	
+
 	private void muteConnection(CallbackContext callbackContext) {
 		if (mConnection == null) {
 			callbackContext.sendPluginResult(new PluginResult(
@@ -326,7 +329,7 @@ public class TCPlugin extends CordovaPlugin implements DeviceListener,
 		mConnection.setMuted(!mConnection.isMuted());
 		callbackContext.success();
 	}
-	
+
 
 	private void deviceStatus(CallbackContext callbackContext) {
 		if (mDevice == null) {
@@ -348,7 +351,7 @@ public class TCPlugin extends CordovaPlugin implements DeviceListener,
 		default:
 			break;
 		}
-		
+
 		PluginResult result = new PluginResult(PluginResult.Status.OK,state);
 		callbackContext.sendPluginResult(result);
 	}
@@ -376,9 +379,9 @@ public class TCPlugin extends CordovaPlugin implements DeviceListener,
 			break;
 		default:
 			break;
-		
+
 		}
-		
+
 		PluginResult result = new PluginResult(PluginResult.Status.OK,state);
 		callbackContext.sendPluginResult(result);
 	}
@@ -390,7 +393,7 @@ public class TCPlugin extends CordovaPlugin implements DeviceListener,
 					PluginResult.Status.ERROR));
 			return;
 		}
-		
+
 		JSONObject parameters = new JSONObject(mConnection.getParameters());
 
 
@@ -398,21 +401,21 @@ public class TCPlugin extends CordovaPlugin implements DeviceListener,
 		callbackContext.sendPluginResult(result);
 	}
 
-	
+
 	private void showNotification(JSONArray arguments, CallbackContext context) {
 		Context acontext = TCPlugin.this.webView.getContext();
-		NotificationManager mNotifyMgr = 
+		NotificationManager mNotifyMgr =
 		        (NotificationManager) acontext.getSystemService(Activity.NOTIFICATION_SERVICE);
 		mNotifyMgr.cancelAll();
-		mCurrentNotificationText = arguments.optString(0);		
-		
-		
+		mCurrentNotificationText = arguments.optString(0);
+
+
 		PackageManager pm = acontext.getPackageManager();
         Intent notificationIntent = pm.getLaunchIntentForPackage(acontext.getPackageName());
         notificationIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
         notificationIntent.putExtra("notificationTag", "BVNotification");
-        
-	    PendingIntent pendingIntent = PendingIntent.getActivity(acontext, 0, notificationIntent, 0);  
+
+	    PendingIntent pendingIntent = PendingIntent.getActivity(acontext, 0, notificationIntent, 0);
 	    int notification_icon = acontext.getResources().getIdentifier("notification", "drawable", acontext.getPackageName());
 		NotificationCompat.Builder mBuilder =
 			    new NotificationCompat.Builder(acontext)
@@ -421,20 +424,20 @@ public class TCPlugin extends CordovaPlugin implements DeviceListener,
 			    .setContentText(mCurrentNotificationText)
 			    .setContentIntent(pendingIntent);
 		mNotifyMgr.notify(mCurrentNotificationId, mBuilder.build());
-		
+
 		context.success();
 	}
-	
+
 	private void cancelNotification(JSONArray arguments, CallbackContext context) {
-		NotificationManager mNotifyMgr = 
+		NotificationManager mNotifyMgr =
 		        (NotificationManager) TCPlugin.this.webView.getContext().getSystemService(Activity.NOTIFICATION_SERVICE);
 		mNotifyMgr.cancel(mCurrentNotificationId);
 		context.success();
 	}
-	
+
 	/**
 	 * 	Changes sound from earpiece to speaker and back
-	 * 
+	 *
 	 * 	@param mode	Speaker Mode
 	 * */
 	public void setSpeaker(JSONArray arguments, final CallbackContext callbackContext) {
@@ -445,37 +448,37 @@ public class TCPlugin extends CordovaPlugin implements DeviceListener,
         if(mode.equals("on")) {
         	Log.d("TCPlugin", "SPEAKER");
         	m_amAudioManager.setMode(AudioManager.MODE_NORMAL);
-        	m_amAudioManager.setSpeakerphoneOn(true);        	
+        	m_amAudioManager.setSpeakerphoneOn(true);
         }
         else {
         	Log.d("TCPlugin", "EARPIECE");
-        	m_amAudioManager.setMode(AudioManager.MODE_IN_CALL); 
+        	m_amAudioManager.setMode(AudioManager.MODE_IN_CALL);
         	m_amAudioManager.setSpeakerphoneOn(false);
         }
 	}
-	
+
 	// DeviceListener methods
 
 	@Override
 	public void onPresenceChanged(Device device, PresenceEvent presenceEvent) {
-		
-		 JSONObject object = new JSONObject(); 
-		 try { 
-			 object.put("from", presenceEvent.getName()); 
-			 object.put("available",presenceEvent.isAvailable()); 
+
+		 JSONObject object = new JSONObject();
+		 try {
+			 object.put("from", presenceEvent.getName());
+			 object.put("available",presenceEvent.isAvailable());
 		 } catch (JSONException e) {
 			 mInitCallbackContext.sendPluginResult(new
-					 PluginResult(PluginResult.Status.JSON_EXCEPTION)); 
-			 return; 
+					 PluginResult(PluginResult.Status.JSON_EXCEPTION));
+			 return;
 		 }
 		 javascriptCallback("onpresence", object,mInitCallbackContext);
-		 
+
 	}
 
 	@Override
 	public void onStartListening(Device device) {
 		// What to do here? The JS library doesn't have an event for this.
-		
+
 	}
 
 	@Override
@@ -511,7 +514,7 @@ public class TCPlugin extends CordovaPlugin implements DeviceListener,
 
 	// Twilio Connection Listener methods
 	@Override
-	public void onConnected(Connection connection) { 
+	public void onConnected(Connection connection) {
 		Log.d(TAG, "onConnected()");
 		fireDocumentEvent("onconnect");
 		if (connection.isIncoming()) {
@@ -569,7 +572,7 @@ public class TCPlugin extends CordovaPlugin implements DeviceListener,
 		javascriptCallback(event, null, callbackContext);
 	}
 
-	
+
 	private void javascriptErrorback(int errorCode, String errorMessage, CallbackContext callbackContext) {
 		JSONObject object = new JSONObject();
 		try {
@@ -594,9 +597,9 @@ public class TCPlugin extends CordovaPlugin implements DeviceListener,
 	public void onDestroy() {
 		super.onDestroy();
 		//lifecycle events
-		LocalBroadcastManager lbm = LocalBroadcastManager.getInstance(cordova
-				.getActivity());
-		lbm.unregisterReceiver(mBroadcastReceiver);
+        if(mDevice != null){
+            mDevice.release();
+        }
 	}
 
 
