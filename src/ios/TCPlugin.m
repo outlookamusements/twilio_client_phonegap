@@ -106,6 +106,15 @@
      }
 }
 
+
+- (void)onAppTerminate {
+    if(self.device != nil) {
+          [self.device disconnectAll];
+          self.device.delegate = nil;
+          self.device = nil;
+    }
+}
+
 -(void)deviceStatusEvent {
     
     NSLog(@"Device state: %ld",(long) self.device.state);
