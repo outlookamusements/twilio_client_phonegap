@@ -95,7 +95,7 @@
     //self.device.outgoingSoundEnabled   = NO;
     //self.device.disconnectSoundEnabled = NO;
 
-    _timer = [NSTimer scheduledTimerWithTimeInterval:0.5 target:self selector:@selector(deviceStatusEvent) userInfo:nil repeats:YES];
+    _timer = [NSTimer scheduledTimerWithTimeInterval:2.0 target:self selector:@selector(deviceStatusEvent) userInfo:nil repeats:YES];
 }
 
 -(void)reset:(CDVInvokedUrlCommand*)command {
