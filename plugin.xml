@@ -31,7 +31,7 @@
         </config-file>
         
         <framework src="com.android.support:support-v4:+" />
-        <framework src="com.twilio:client-android:1.2.17"/>
+        <framework src="com.twilio:client-android:1.2.18"/>
 
 
         <source-file src="src/android/com/phonegap/plugins/twilioclient/IncomingConnectionActivity.java"
