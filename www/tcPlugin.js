@@ -90,7 +90,7 @@
         var args = [alertBody, ringSound];
         if(ringSound === "undefined") {
             args = [alertBody];
-        }    
+        }
         Cordova.exec(null, null, "TCPlugin", "showNotification", args);
     }
 
@@ -99,7 +99,7 @@
     }
 
     TwilioPlugin.Connection.prototype.setSpeaker = function(mode) {
-        // "on" or "off"        
+        // "on" or "off"
         Cordova.exec(null, null, "TCPlugin", "setSpeaker", [mode]);
     }
 
@@ -119,8 +119,12 @@
         delegate['onconnectionerror'] = fn;
     }
 
-    TwilioPlugin.Connection.prototype.mute = function() {
-        Cordova.exec(null,null,"TCPlugin","muteConnection",[]);
+    TwilioPlugin.Connection.prototype.mute = function(isMuted) {
+        Cordova.exec(null,null,"TCPlugin","muteConnection",[isMuted]);
+    }
+
+    TwilioPlugin.Connection.prototype.isMuted = function(fn) {
+        Cordova.exec(fn,null,"TCPlugin","isConnectionMuted",[]);
     }
 
     TwilioPlugin.Connection.prototype.unmute = function() {
@@ -134,7 +138,7 @@
     TwilioPlugin.Connection.prototype.status = function(fn) {
         Cordova.exec(fn, null, "TCPlugin", "connectionStatus", []);
     }
-	
+
 	    TwilioPlugin.Connection.prototype.parameters = function(fn) {
         Cordova.exec(fn, null, "TCPlugin", "connectionParameters", []);
     }
