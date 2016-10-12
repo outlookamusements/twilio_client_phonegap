@@ -136,7 +136,10 @@ public class TCPlugin extends CordovaPlugin implements DeviceListener,
 			sendDigits(args, callbackContext);
 			return true;
 		} else if ("muteConnection".equals(action)) {
-			muteConnection(args, callbackContext);
+			muteConnection(callbackContext);
+			return true;
+		} else if ("unmuteConnection".equals(action)) {
+			unmuteConnection(callbackContext);
 			return true;
 		} else if ("deviceStatus".equals(action)) {
 			deviceStatus(callbackContext);
@@ -320,13 +323,23 @@ public class TCPlugin extends CordovaPlugin implements DeviceListener,
 		mConnection.sendDigits(arguments.optString(0));
 	}
 
-	private void muteConnection(JSONArray arguments, CallbackContext callbackContext) {
-		if (mConnection == null || arguments == null || arguments.length() < 1) {
+	private void muteConnection(CallbackContext callbackContext) {
+		if (mConnection == null) {
 			callbackContext.sendPluginResult(new PluginResult(
 					PluginResult.Status.ERROR));
 			return;
 		}
-		mConnection.setMuted(arguments.getBoolean(0));
+		mConnection.setMuted(true);
+		callbackContext.success();
+	}
+
+	private void unmuteConnection(CallbackContext callbackContext) {
+		if (mConnection == null) {
+			callbackContext.sendPluginResult(new PluginResult(
+					PluginResult.Status.ERROR));
+			return;
+		}
+		mConnection.setMuted(false);
 		callbackContext.success();
 	}
 

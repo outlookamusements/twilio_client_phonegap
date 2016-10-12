@@ -120,7 +120,11 @@
     }
 
     TwilioPlugin.Connection.prototype.mute = function(isMuted) {
-        Cordova.exec(null,null,"TCPlugin","muteConnection",[isMuted]);
+      if (isMuted) {
+        Cordova.exec(null,null,"TCPlugin","muteConnection",[]);
+      } else {
+        Cordova.exec(null,null,"TCPlugin","unmuteConnection",[]);
+      }
     }
 
     TwilioPlugin.Connection.prototype.isMuted = function(fn) {

@@ -203,8 +203,11 @@
 }
 
 -(void)muteConnection:(CDVInvokedUrlCommand*)command {
-    BOOL *muted = [command.arguments objectAtIndex:0];
-    self.connection.muted = muted;
+    self.connection.muted = YES;
+}
+
+-(void)unmuteConnection:(CDVInvokedUrlCommand*)command {
+    self.connection.muted = NO;
 }
 
 -(void)isConnectionMuted:(CDVInvokedUrlCommand*)command {
