@@ -39,12 +39,12 @@ import java.util.Map;
 /**
  * Twilio Client Plugin for Cordova/PhoneGap Targeted at version 2.9 for
  * compatibility
- * 
- * 
- * 
+ *
+ *
+ *
  * @see https://github.com/stevegraham/twilio_client_phonegap
  * @author Jeff Linwood, https://github.com/jefflinwood
- * 
+ *
  */
 public class TCPlugin extends CordovaPlugin implements DeviceListener,
 		InitListener, ConnectionListener {
@@ -74,22 +74,22 @@ public class TCPlugin extends CordovaPlugin implements DeviceListener,
 			Log.d(TAG, "incoming intent received with connection: "+ mConnection.getState().name());
 			String constate = mConnection.getState().name();
 			if(constate.equals("PENDING")) {
-				TCPlugin.this.javascriptCallback("onincoming", mInitCallbackContext);				
+				TCPlugin.this.javascriptCallback("onincoming", mInitCallbackContext);
 			}
 		}
 	};
 
 	/**
 	 * Android Cordova Action Router
-	 * 
+	 *
 	 * Executes the request.
-	 * 
+	 *
 	 * This method is called from the WebView thread. To do a non-trivial amount
 	 * of work, use: cordova.getThreadPool().execute(runnable);
-	 * 
+	 *
 	 * To run on the UI thread, use:
 	 * cordova.getActivity().runOnUiThread(runnable);
-	 * 
+	 *
 	 * @param action
 	 *            The action to execute.
 	 * @param args
@@ -138,6 +138,9 @@ public class TCPlugin extends CordovaPlugin implements DeviceListener,
 		} else if ("muteConnection".equals(action)) {
 			muteConnection(callbackContext);
 			return true;
+		} else if ("unmuteConnection".equals(action)) {
+			unmuteConnection(callbackContext);
+			return true;
 		} else if ("deviceStatus".equals(action)) {
 			deviceStatus(callbackContext);
 			return true;
@@ -164,7 +167,7 @@ public class TCPlugin extends CordovaPlugin implements DeviceListener,
             return true;
         }
 
-		return false; 
+		return false;
 	}
 
 	private void reset() {
@@ -181,7 +184,7 @@ public class TCPlugin extends CordovaPlugin implements DeviceListener,
 
 	/**
 	 * Initialize Twilio's client library - this is only necessary on Android,
-	 * 
+	 *
 	 */
 	private void initTwilio(CallbackContext callbackContext) {
 	    AudioManager myAudioMgr = (AudioManager) cordova.getActivity().getApplicationContext().getSystemService(Context.AUDIO_SERVICE);
@@ -326,8 +329,22 @@ public class TCPlugin extends CordovaPlugin implements DeviceListener,
 					PluginResult.Status.ERROR));
 			return;
 		}
-		mConnection.setMuted(!mConnection.isMuted());
+		mConnection.setMuted(true);
 		callbackContext.success();
+	}
+
+	private void unmuteConnection(CallbackContext callbackContext) {
+		if (mConnection == null) {
+			callbackContext.sendPluginResult(new PluginResult(
+					PluginResult.Status.ERROR));
+			return;
+		}
+		mConnection.setMuted(false);
+		callbackContext.success();
+	}
+
+	private void isConnectionMuted(CallbackContext callbackContext) {
+		callbackContext.success(mConnection.isMuted());
 	}
 
 
@@ -449,6 +466,10 @@ public class TCPlugin extends CordovaPlugin implements DeviceListener,
         	Log.d("TCPlugin", "SPEAKER");
         	m_amAudioManager.setMode(AudioManager.MODE_NORMAL);
         	m_amAudioManager.setSpeakerphoneOn(true);
+					m_amAudioManager.setStreamVolume(
+						AudioManager.STREAM_VOICE_CALL,
+						m_amAudioManager.getStreamMaxVolume(AudioManager.STREAM_VOICE_CALL),
+						0);
         }
         else {
         	Log.d("TCPlugin", "EARPIECE");
@@ -622,6 +643,6 @@ public class TCPlugin extends CordovaPlugin implements DeviceListener,
 		}
 	}
 
-	
+
 
 }
