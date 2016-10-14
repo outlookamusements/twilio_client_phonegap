@@ -344,7 +344,7 @@ public class TCPlugin extends CordovaPlugin implements DeviceListener,
 	}
 
 	private void isConnectionMuted(CallbackContext callbackContext) {
-		callbackContext.success(mConnection.isMuted());
+		callbackContext.success(String.valueOf(mConnection.isMuted()));
 	}
 
 
