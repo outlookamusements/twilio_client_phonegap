@@ -141,6 +141,9 @@ public class TCPlugin extends CordovaPlugin implements DeviceListener,
 		} else if ("unmuteConnection".equals(action)) {
 			unmuteConnection(callbackContext);
 			return true;
+		} else if ("isConnectionMuted".equals(action)) {
+			isConnectionMuted(callbackContext);
+			return true;
 		} else if ("deviceStatus".equals(action)) {
 			deviceStatus(callbackContext);
 			return true;
