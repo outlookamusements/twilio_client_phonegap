@@ -13,6 +13,10 @@ import android.media.AudioManager;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
+import android.app.KeyguardManager;
+import android.app.ActivityManager;
+import android.app.Notification;
+import android.net.Uri;
 
 import com.twilio.client.Connection;
 import com.twilio.client.ConnectionListener;
@@ -74,6 +78,11 @@ public class TCPlugin extends CordovaPlugin implements DeviceListener,
 			Log.d(TAG, "incoming intent received with connection: "+ mConnection.getState().name());
 			String constate = mConnection.getState().name();
 			if(constate.equals("PENDING")) {
+                // if application is in background show a Local Notifiaction
+                if (shouldShowNotification(TCPlugin.this.webView.getContext()))
+                {
+                    showLocalNotification();
+                }
 				TCPlugin.this.javascriptCallback("onincoming", mInitCallbackContext);
 			}
 		}
@@ -647,5 +656,44 @@ public class TCPlugin extends CordovaPlugin implements DeviceListener,
 	}
 
 
+    static boolean shouldShowNotification(Context context) {
+        ActivityManager.RunningAppProcessInfo myProcess = new ActivityManager.RunningAppProcessInfo();
+        ActivityManager.getMyMemoryState(myProcess);
+        if (myProcess.importance != ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND) {
+            return true;
+        }
 
+        KeyguardManager km = (KeyguardManager) context.getSystemService(Context.KEYGUARD_SERVICE);
+        // app is foreground, but screen is locked, so show notification
+        return km.inKeyguardRestrictedInputMode();
+    }
+
+
+    private void showLocalNotification() {
+        Log.d(TAG, "showLocalNotification");
+
+        Context acontext = TCPlugin.this.webView.getContext();
+        NotificationManager mNotifyMgr = (NotificationManager) acontext.getSystemService(Activity.NOTIFICATION_SERVICE);
+        mNotifyMgr.cancelAll();
+
+        PackageManager pm = acontext.getPackageManager();
+        Intent notificationIntent = pm.getLaunchIntentForPackage(acontext.getPackageName());
+        notificationIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+
+        PendingIntent pendingIntent = PendingIntent.getActivity(acontext, 0, notificationIntent, 0);
+        int notification_icon = acontext.getResources().getIdentifier("icon", "drawable", acontext.getPackageName());
+        int notificationID = 0;
+
+        NotificationCompat.Builder mBuilder = new NotificationCompat.Builder(acontext)
+            .setSmallIcon(notification_icon)
+            .setContentTitle("Glenda")
+            .setContentText("Incoming Call")
+            .setContentIntent(pendingIntent);
+
+        Notification notification = mBuilder.build();
+        notification.sound = Uri.parse("android.resource://" + acontext.getPackageName() + "/raw/incoming");
+        notification.flags = Notification.FLAG_AUTO_CANCEL;
+
+        mNotifyMgr.notify(notificationID, notification);
+    }
 }
