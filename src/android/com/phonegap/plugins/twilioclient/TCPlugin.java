@@ -33,6 +33,8 @@ import org.apache.cordova.PluginResult.Status;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import android.os.PowerManager;
+import android.graphics.Color;
 
 import java.util.HashMap;
 import java.util.Iterator;
@@ -77,7 +79,9 @@ public class TCPlugin extends CordovaPlugin implements DeviceListener,
 			mConnection.setConnectionListener(plugin);
 			Log.d(TAG, "incoming intent received with connection: "+ mConnection.getState().name());
 			String constate = mConnection.getState().name();
+			Log.d(TAG, "1");
 			if(constate.equals("PENDING")) {
+                Log.d(TAG, "2");
                 // if application is in background show a Local Notifiaction
                 if (shouldShowNotification(TCPlugin.this.webView.getContext()))
                 {
@@ -663,6 +667,13 @@ public class TCPlugin extends CordovaPlugin implements DeviceListener,
             return true;
         }
 
+        // If the screen is off then the device has been locked
+		PowerManager powerManager = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
+		if (powerManager.isScreenOn() == false)
+		{
+			return true;
+		}
+
         KeyguardManager km = (KeyguardManager) context.getSystemService(Context.KEYGUARD_SERVICE);
         // app is foreground, but screen is locked, so show notification
         return km.inKeyguardRestrictedInputMode();
@@ -688,12 +699,15 @@ public class TCPlugin extends CordovaPlugin implements DeviceListener,
             .setSmallIcon(notification_icon)
             .setContentTitle("Glenda")
             .setContentText("Incoming Call")
+            .setLights(Color.RED, 1, 1)
+            .setPriority(Notification.PRIORITY_HIGH)
             .setContentIntent(pendingIntent);
 
         Notification notification = mBuilder.build();
         notification.sound = Uri.parse("android.resource://" + acontext.getPackageName() + "/raw/incoming");
-        notification.flags = Notification.FLAG_AUTO_CANCEL;
-
+        notification.flags = Notification.FLAG_AUTO_CANCEL | Notification.FLAG_SHOW_LIGHTS;
+        notification.ledOnMS = 1000;
+        notification.ledOffMS = 1000;
         mNotifyMgr.notify(notificationID, notification);
     }
 }
