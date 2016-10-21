@@ -80,9 +80,9 @@
         <source-file src="sdk/ios/Libraries/libTwilioClient.a" framework="true" />
         <source-file src="sdk/ios/Libraries/libcrypto.a" framework="true" />
         <source-file src="sdk/ios/Libraries/libssl.a" framework="true" />
-        <source-file src="sdk/ios/Resources/incoming.wav"/>
-        <source-file src="sdk/ios/Resources/outgoing.wav"/>
-        <source-file src="sdk/ios/Resources/disconnect.wav"/>
+        <resource-file src="sdk/ios/Resources/incoming.wav"/>
+        <resource-file src="sdk/ios/Resources/outgoing.wav"/>
+        <resource-file src="sdk/ios/Resources/disconnect.wav"/>
 
         <info>
 You need to download __Twilio Client for iOS__ from https://www.twilio.com/docs/client/ios. Uncompress the download - you will need to follow a few steps that plugman can not do yet:
