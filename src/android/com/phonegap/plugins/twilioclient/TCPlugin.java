@@ -9,14 +9,19 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
+import android.hardware.display.DisplayManager;
 import android.media.AudioManager;
+import android.net.Uri;
+import android.os.Build;
+import android.os.PowerManager;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 import android.app.KeyguardManager;
 import android.app.ActivityManager;
 import android.app.Notification;
-import android.net.Uri;
+import android.view.Display;
 
 import com.twilio.client.Connection;
 import com.twilio.client.ConnectionListener;
@@ -33,14 +38,12 @@ import org.apache.cordova.PluginResult.Status;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-import android.os.PowerManager;
-import android.graphics.Color;
 
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
-//import android.R;
+
 
 /**
  * Twilio Client Plugin for Cordova/PhoneGap Targeted at version 2.9 for
@@ -53,626 +56,649 @@ import java.util.Map;
  *
  */
 public class TCPlugin extends CordovaPlugin implements DeviceListener,
-		InitListener, ConnectionListener {
+        InitListener, ConnectionListener {
 
-	private final static String TAG = "TCPlugin";
+    private final static String TAG = "TCPlugin";
 
-	private Device mDevice;
-	private Connection mConnection;
-	private CallbackContext mInitCallbackContext;
-	private JSONArray mInitDeviceSetupArgs;
-	private int mCurrentNotificationId = 1;
-	private String mCurrentNotificationText;
-	private TCPlugin plugin = this;
+    private Device mDevice;
+    private Connection mConnection;
+    private CallbackContext mInitCallbackContext;
+    private JSONArray mInitDeviceSetupArgs;
+    private int mCurrentNotificationId = 1;
+    private String mCurrentNotificationText;
+    private TCPlugin plugin = this;
 
-	// Marshmallow Permissions
-	public static final String RECORD_AUDIO = Manifest.permission.RECORD_AUDIO;
-	public static final int RECORD_AUDIO_REQ_CODE = 0;
+    // Marshmallow Permissions
+    public static final String RECORD_AUDIO = Manifest.permission.RECORD_AUDIO;
+    public static final int RECORD_AUDIO_REQ_CODE = 0;
 
 
 
-	private BroadcastReceiver mBroadcastReceiver = new BroadcastReceiver() {
-		@Override
-		public void onReceive(Context context, Intent intent) {
-			// mDevice = intent.getParcelableExtra(Device.EXTRA_DEVICE);
-			mConnection = intent.getParcelableExtra(Device.EXTRA_CONNECTION);
-			mConnection.setConnectionListener(plugin);
-			Log.d(TAG, "incoming intent received with connection: "+ mConnection.getState().name());
-			String constate = mConnection.getState().name();
-			Log.d(TAG, "1");
-			if(constate.equals("PENDING")) {
-                Log.d(TAG, "2");
+    private BroadcastReceiver mBroadcastReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            // mDevice = intent.getParcelableExtra(Device.EXTRA_DEVICE);
+            mConnection = intent.getParcelableExtra(Device.EXTRA_CONNECTION);
+            mConnection.setConnectionListener(plugin);
+            Log.d(TAG, "incoming intent received with connection: "+ mConnection.getState().name());
+            String constate = mConnection.getState().name();
+            if(constate.equals("PENDING")) {
+                Log.d(TAG, "PENDING");
                 // if application is in background show a Local Notifiaction
                 if (shouldShowNotification(TCPlugin.this.webView.getContext()))
                 {
                     showLocalNotification();
                 }
-				TCPlugin.this.javascriptCallback("onincoming", mInitCallbackContext);
-			}
-		}
-	};
+                TCPlugin.this.javascriptCallback("onincoming", mInitCallbackContext);
+            }
+        }
+    };
 
-	/**
-	 * Android Cordova Action Router
-	 *
-	 * Executes the request.
-	 *
-	 * This method is called from the WebView thread. To do a non-trivial amount
-	 * of work, use: cordova.getThreadPool().execute(runnable);
-	 *
-	 * To run on the UI thread, use:
-	 * cordova.getActivity().runOnUiThread(runnable);
-	 *
-	 * @param action
-	 *            The action to execute.
-	 * @param args
-	 *            The exec() arguments in JSON form.
-	 * @param callbackContext
-	 *            The callback context used when calling back into JavaScript.
-	 * @return Whether the action was valid.
-	 */
-	@Override
-	public boolean execute(final String action, final JSONArray args,
-			final CallbackContext callbackContext) throws JSONException {
-		if ("deviceSetup".equals(action)) {
-			if (Twilio.isInitialized()) {
-				deviceSetup(args, callbackContext);
-			} else {
-				mInitCallbackContext = callbackContext;
-				mInitDeviceSetupArgs = args;
-				if(cordova.hasPermission(RECORD_AUDIO))
-				{
-					initTwilio(callbackContext);
-				}
-				else
-				{
-					cordova.requestPermission(this, RECORD_AUDIO_REQ_CODE, RECORD_AUDIO);
-				}
+    /**
+     * Android Cordova Action Router
+     *
+     * Executes the request.
+     *
+     * This method is called from the WebView thread. To do a non-trivial amount
+     * of work, use: cordova.getThreadPool().execute(runnable);
+     *
+     * To run on the UI thread, use:
+     * cordova.getActivity().runOnUiThread(runnable);
+     *
+     * @param action
+     *            The action to execute.
+     * @param args
+     *            The exec() arguments in JSON form.
+     * @param callbackContext
+     *            The callback context used when calling back into JavaScript.
+     * @return Whether the action was valid.
+     */
+    @Override
+    public boolean execute(final String action, final JSONArray args,
+                           final CallbackContext callbackContext) throws JSONException {
+        if ("deviceSetup".equals(action)) {
+            if (Twilio.isInitialized()) {
+                deviceSetup(args, callbackContext);
+            } else {
+                mInitCallbackContext = callbackContext;
+                mInitDeviceSetupArgs = args;
+                if(cordova.hasPermission(RECORD_AUDIO))
+                {
+                    initTwilio(callbackContext);
+                }
+                else
+                {
+                    cordova.requestPermission(this, RECORD_AUDIO_REQ_CODE, RECORD_AUDIO);
+                }
 
 
-			}
-			return true;
+            }
+            return true;
 
-		} else if ("connect".equals(action)) {
-			connect(args, callbackContext);
-			return true;
-		} else if ("disconnectAll".equals(action)) {
-			disconnectAll(args, callbackContext);
-			return true;
-		} else if ("acceptConnection".equals(action)) {
-			acceptConnection(args, callbackContext);
-			return true;
-		} else if ("disconnectConnection".equals(action)) {
-			disconnectConnection(args, callbackContext);
-			return true;
-		} else if ("sendDigits".equals(action)) {
-			sendDigits(args, callbackContext);
-			return true;
-		} else if ("muteConnection".equals(action)) {
-			muteConnection(callbackContext);
-			return true;
-		} else if ("unmuteConnection".equals(action)) {
-			unmuteConnection(callbackContext);
-			return true;
-		} else if ("isConnectionMuted".equals(action)) {
-			isConnectionMuted(callbackContext);
-			return true;
-		} else if ("deviceStatus".equals(action)) {
-			deviceStatus(callbackContext);
-			return true;
-		} else if ("connectionStatus".equals(action)) {
-			connectionStatus(callbackContext);
-			return true;
-		} else if ("connectionParameters".equals(action)) {
-			connectionParameters(callbackContext);
-			return true;
-		} else if ("rejectConnection".equals(action)) {
-			rejectConnection(args, callbackContext);
-			return true;
-		} else if ("showNotification".equals(action)) {
-			showNotification(args,callbackContext);
-			return true;
-		} else if ("cancelNotification".equals(action)) {
-			cancelNotification(args,callbackContext);
-			return true;
-		} else if ("setSpeaker".equals(action)) {
-			setSpeaker(args,callbackContext);
-			return true;
-		} else if ("reset".equals(action)) {
+        } else if ("connect".equals(action)) {
+            connect(args, callbackContext);
+            return true;
+        } else if ("disconnectAll".equals(action)) {
+            disconnectAll(args, callbackContext);
+            return true;
+        } else if ("acceptConnection".equals(action)) {
+            acceptConnection(args, callbackContext);
+            return true;
+        } else if ("disconnectConnection".equals(action)) {
+            disconnectConnection(args, callbackContext);
+            return true;
+        } else if ("sendDigits".equals(action)) {
+            sendDigits(args, callbackContext);
+            return true;
+        } else if ("muteConnection".equals(action)) {
+            muteConnection(callbackContext);
+            return true;
+        } else if ("unmuteConnection".equals(action)) {
+            unmuteConnection(callbackContext);
+            return true;
+        } else if ("isConnectionMuted".equals(action)) {
+            isConnectionMuted(callbackContext);
+            return true;
+        } else if ("deviceStatus".equals(action)) {
+            deviceStatus(callbackContext);
+            return true;
+        } else if ("connectionStatus".equals(action)) {
+            connectionStatus(callbackContext);
+            return true;
+        } else if ("connectionParameters".equals(action)) {
+            connectionParameters(callbackContext);
+            return true;
+        } else if ("rejectConnection".equals(action)) {
+            rejectConnection(args, callbackContext);
+            return true;
+        } else if ("showNotification".equals(action)) {
+            showNotification(args,callbackContext);
+            return true;
+        } else if ("cancelNotification".equals(action)) {
+            cancelNotification(args,callbackContext);
+            return true;
+        } else if ("setSpeaker".equals(action)) {
+            setSpeaker(args,callbackContext);
+            return true;
+        } else if ("reset".equals(action)) {
             reset();
             return true;
         }
 
-		return false;
-	}
+        return false;
+    }
 
-	private void reset() {
-         LocalBroadcastManager lbm = LocalBroadcastManager.getInstance(cordova.getActivity());
-            lbm.unregisterReceiver(mBroadcastReceiver);
-            cordova.getThreadPool().execute(new Runnable(){
-            	public void run() {
-            		if(mDevice != null){
-            		    mDevice.release();
-            		}
-            	}
-         });
-     }
+    private void reset() {
+        LocalBroadcastManager lbm = LocalBroadcastManager.getInstance(cordova.getActivity());
+        lbm.unregisterReceiver(mBroadcastReceiver);
+        cordova.getThreadPool().execute(new Runnable(){
+            public void run() {
+                if(mDevice != null){
+                    mDevice.release();
+                }
+            }
+        });
+    }
 
-	/**
-	 * Initialize Twilio's client library - this is only necessary on Android,
-	 *
-	 */
-	private void initTwilio(CallbackContext callbackContext) {
-	    AudioManager myAudioMgr = (AudioManager) cordova.getActivity().getApplicationContext().getSystemService(Context.AUDIO_SERVICE);
+    /**
+     * Initialize Twilio's client library - this is only necessary on Android,
+     *
+     */
+    private void initTwilio(CallbackContext callbackContext) {
+        AudioManager myAudioMgr = (AudioManager) cordova.getActivity().getApplicationContext().getSystemService(Context.AUDIO_SERVICE);
         String nativeSampleRate = myAudioMgr.getProperty(AudioManager.PROPERTY_OUTPUT_SAMPLE_RATE);
-	    Log.d(TAG, "sample rate: "+ nativeSampleRate);
-		Twilio.initialize(cordova.getActivity().getApplicationContext(), this);
-	}
+        Log.d(TAG, "sample rate: "+ nativeSampleRate);
+        Twilio.initialize(cordova.getActivity().getApplicationContext(), this);
+    }
 
-	/**
-	 * Set up the Twilio device with a capability token
-	 *
-	 * @param arguments JSONArray with a Twilio capability token
-	 */
-	private void deviceSetup(JSONArray arguments,
-			final CallbackContext callbackContext) {
-		if (arguments == null || arguments.length() < 1) {
-			callbackContext.sendPluginResult(new PluginResult(
-					PluginResult.Status.ERROR));
-			return;
-		}
+    /**
+     * Set up the Twilio device with a capability token
+     *
+     * @param arguments JSONArray with a Twilio capability token
+     */
+    private void deviceSetup(JSONArray arguments,
+                             final CallbackContext callbackContext) {
+        if (arguments == null || arguments.length() < 1) {
+            callbackContext.sendPluginResult(new PluginResult(
+                    PluginResult.Status.ERROR));
+            return;
+        }
         if (arguments.optString(0).equals("")) {
-			Log.d("TCPlugin","Releasing device");
-			cordova.getThreadPool().execute(new Runnable(){
-				public void run() {
-					mDevice.release();
-				}
-			});
-			javascriptCallback("onoffline", callbackContext);
-			return;
-		}
-		mDevice = Twilio.createDevice(arguments.optString(0), this);
+            Log.d("TCPlugin","Releasing device");
+            cordova.getThreadPool().execute(new Runnable(){
+                public void run() {
+                    mDevice.release();
+                }
+            });
+            javascriptCallback("onoffline", callbackContext);
+            return;
+        }
+        mDevice = Twilio.createDevice(arguments.optString(0), this);
 
-		Intent intent = new Intent(this.cordova.getActivity(), IncomingConnectionActivity.class);
-		PendingIntent pendingIntent = PendingIntent.getActivity(this.cordova.getActivity(), 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
-		mDevice.setIncomingIntent(pendingIntent);
+        Intent intent = new Intent(this.cordova.getActivity(), IncomingConnectionActivity.class);
+        PendingIntent pendingIntent = PendingIntent.getActivity(this.cordova.getActivity(), 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+        mDevice.setIncomingIntent(pendingIntent);
 
-		LocalBroadcastManager lbm = LocalBroadcastManager.getInstance(cordova.getActivity());
-		lbm.registerReceiver(mBroadcastReceiver, new IntentFilter(IncomingConnectionActivity.ACTION_NAME));
+        LocalBroadcastManager lbm = LocalBroadcastManager.getInstance(cordova.getActivity());
+        lbm.registerReceiver(mBroadcastReceiver, new IntentFilter(IncomingConnectionActivity.ACTION_NAME));
 
-		// delay one second to give Twilio device a change to change status (similar to iOS plugin)
-		cordova.getThreadPool().execute(new Runnable(){
-				public void run() {
-					try {
-						Thread.sleep(5000);
-						deviceStatusEvent(callbackContext);
-					} catch (InterruptedException ex) {
-						Log.e(TAG,"InterruptedException: " + ex.getMessage(),ex);
-					}
-				}
-			});
-	}
+        // delay one second to give Twilio device a change to change status (similar to iOS plugin)
+        cordova.getThreadPool().execute(new Runnable(){
+            public void run() {
+                try {
+                    Thread.sleep(5000);
+                    deviceStatusEvent(callbackContext);
+                } catch (InterruptedException ex) {
+                    Log.e(TAG,"InterruptedException: " + ex.getMessage(),ex);
+                }
+            }
+        });
+    }
 
-	private void deviceStatusEvent(CallbackContext callbackContext) {
-		if (mDevice == null) {
-			callbackContext.sendPluginResult(new PluginResult(
-					PluginResult.Status.ERROR));
-			return;
-		}
-		switch (mDevice.getState()) {
-		case OFFLINE:
-			javascriptCallback("onoffline", callbackContext);
-			break;
-		case READY:
-			javascriptCallback("onready", callbackContext);
-			break;
-		default:
-			break;
-		}
-	}
+    private void deviceStatusEvent(CallbackContext callbackContext) {
+        if (mDevice == null) {
+            callbackContext.sendPluginResult(new PluginResult(
+                    PluginResult.Status.ERROR));
+            return;
+        }
+        switch (mDevice.getState()) {
+            case OFFLINE:
+                javascriptCallback("onoffline", callbackContext);
+                break;
+            case READY:
+                javascriptCallback("onready", callbackContext);
+                break;
+            default:
+                break;
+        }
+    }
 
-	private void connect(JSONArray arguments, CallbackContext callbackContext) {
-		JSONObject options = arguments.optJSONObject(0);
-		Map<String, String> map = getMap(options);
-		mConnection = mDevice.connect(map, this);
-		Log.d(TAG, "Twilio device.connect() called: "
-				+ mConnection.getState().name());
-	}
+    private void connect(JSONArray arguments, CallbackContext callbackContext) {
+        JSONObject options = arguments.optJSONObject(0);
+        Map<String, String> map = getMap(options);
+        mConnection = mDevice.connect(map, this);
+        Log.d(TAG, "Twilio device.connect() called: "
+                + mConnection.getState().name());
+    }
 
-	// helper method to get a map of strings from a JSONObject
-	public Map<String, String> getMap(JSONObject object) {
-		if (object == null) {
-			return null;
-		}
+    // helper method to get a map of strings from a JSONObject
+    public Map<String, String> getMap(JSONObject object) {
+        if (object == null) {
+            return null;
+        }
 
-		Map<String, String> map = new HashMap<String, String>();
+        Map<String, String> map = new HashMap<String, String>();
 
-		@SuppressWarnings("rawtypes")
-		Iterator keys = object.keys();
-		while (keys.hasNext()) {
-			String key = (String) keys.next();
-			map.put(key, object.optString(key));
-		}
-		return map;
-	}
+        @SuppressWarnings("rawtypes")
+        Iterator keys = object.keys();
+        while (keys.hasNext()) {
+            String key = (String) keys.next();
+            map.put(key, object.optString(key));
+        }
+        return map;
+    }
 
-	// helper method to get a JSONObject from a Map of Strings
-	public JSONObject getJSONObject(Map<String, String> map) throws JSONException {
-		if (map == null) {
-			return null;
-		}
+    // helper method to get a JSONObject from a Map of Strings
+    public JSONObject getJSONObject(Map<String, String> map) throws JSONException {
+        if (map == null) {
+            return null;
+        }
 
-		JSONObject json = new JSONObject();
-		for (String key : map.keySet()) {
-			json.putOpt(key, map.get(key));
-		}
-		return json;
-	}
+        JSONObject json = new JSONObject();
+        for (String key : map.keySet()) {
+            json.putOpt(key, map.get(key));
+        }
+        return json;
+    }
 
-	private void disconnectAll(JSONArray arguments, CallbackContext callbackContext) {
-		mDevice.disconnectAll();
-		callbackContext.success();
-	}
+    private void disconnectAll(JSONArray arguments, CallbackContext callbackContext) {
+        mDevice.disconnectAll();
+        callbackContext.success();
+    }
 
-	private void acceptConnection(JSONArray arguments, CallbackContext callbackContext) {
-		mConnection.accept();
-		callbackContext.success();
-	}
+    private void acceptConnection(JSONArray arguments, CallbackContext callbackContext) {
+        mConnection.accept();
+        callbackContext.success();
+    }
 
-	private void rejectConnection(JSONArray arguments, CallbackContext callbackContext) {
-		mConnection.reject();
-		callbackContext.success();
-	}
+    private void rejectConnection(JSONArray arguments, CallbackContext callbackContext) {
+        mConnection.reject();
+        callbackContext.success();
+    }
 
-	private void disconnectConnection(JSONArray arguments, CallbackContext callbackContext) {
-		mConnection.disconnect();
-		callbackContext.success();
-	}
+    private void disconnectConnection(JSONArray arguments, CallbackContext callbackContext) {
+        mConnection.disconnect();
+        callbackContext.success();
+    }
 
-	private void sendDigits(JSONArray arguments,
-			CallbackContext callbackContext) {
-		if (arguments == null || arguments.length() < 1 || mConnection == null) {
-			callbackContext.sendPluginResult(new PluginResult(
-					PluginResult.Status.ERROR));
-			return;
-		}
-		mConnection.sendDigits(arguments.optString(0));
-	}
+    private void sendDigits(JSONArray arguments,
+                            CallbackContext callbackContext) {
+        if (arguments == null || arguments.length() < 1 || mConnection == null) {
+            callbackContext.sendPluginResult(new PluginResult(
+                    PluginResult.Status.ERROR));
+            return;
+        }
+        mConnection.sendDigits(arguments.optString(0));
+    }
 
-	private void muteConnection(CallbackContext callbackContext) {
-		if (mConnection == null) {
-			callbackContext.sendPluginResult(new PluginResult(
-					PluginResult.Status.ERROR));
-			return;
-		}
-		mConnection.setMuted(true);
-		callbackContext.success();
-	}
+    private void muteConnection(CallbackContext callbackContext) {
+        if (mConnection == null) {
+            callbackContext.sendPluginResult(new PluginResult(
+                    PluginResult.Status.ERROR));
+            return;
+        }
+        mConnection.setMuted(true);
+        callbackContext.success();
+    }
 
-	private void unmuteConnection(CallbackContext callbackContext) {
-		if (mConnection == null) {
-			callbackContext.sendPluginResult(new PluginResult(
-					PluginResult.Status.ERROR));
-			return;
-		}
-		mConnection.setMuted(false);
-		callbackContext.success();
-	}
+    private void unmuteConnection(CallbackContext callbackContext) {
+        if (mConnection == null) {
+            callbackContext.sendPluginResult(new PluginResult(
+                    PluginResult.Status.ERROR));
+            return;
+        }
+        mConnection.setMuted(false);
+        callbackContext.success();
+    }
 
-	private void isConnectionMuted(CallbackContext callbackContext) {
-		callbackContext.success(String.valueOf(mConnection.isMuted()));
-	}
-
-
-	private void deviceStatus(CallbackContext callbackContext) {
-		if (mDevice == null) {
-			callbackContext.sendPluginResult(new PluginResult(
-					PluginResult.Status.ERROR));
-			return;
-		}
-		String state = "";
-		switch (mDevice.getState()) {
-		case BUSY:
-			state = "busy";
-			break;
-		case OFFLINE:
-			state = "offline";
-			break;
-		case READY:
-			state = "ready";
-			break;
-		default:
-			break;
-		}
-
-		PluginResult result = new PluginResult(PluginResult.Status.OK,state);
-		callbackContext.sendPluginResult(result);
-	}
+    private void isConnectionMuted(CallbackContext callbackContext) {
+        callbackContext.success(String.valueOf(mConnection.isMuted()));
+    }
 
 
-	private void connectionStatus(CallbackContext callbackContext) {
-		if (mConnection == null) {
-			callbackContext.sendPluginResult(new PluginResult(
-					PluginResult.Status.ERROR));
-			return;
-		}
-		String state = "";
-		switch (mConnection.getState()) {
-		case CONNECTED:
-			state = "open";
-			break;
-		case CONNECTING:
-			state = "connecting";
-			break;
-		case DISCONNECTED:
-			state = "closed";
-			break;
-		case PENDING:
-			state = "pending";
-			break;
-		default:
-			break;
+    private void deviceStatus(CallbackContext callbackContext) {
+        if (mDevice == null) {
+            callbackContext.sendPluginResult(new PluginResult(
+                    PluginResult.Status.ERROR));
+            return;
+        }
+        String state = "";
+        switch (mDevice.getState()) {
+            case BUSY:
+                state = "busy";
+                break;
+            case OFFLINE:
+                state = "offline";
+                break;
+            case READY:
+                state = "ready";
+                break;
+            default:
+                break;
+        }
 
-		}
-
-		PluginResult result = new PluginResult(PluginResult.Status.OK,state);
-		callbackContext.sendPluginResult(result);
-	}
+        PluginResult result = new PluginResult(PluginResult.Status.OK,state);
+        callbackContext.sendPluginResult(result);
+    }
 
 
-	private void connectionParameters(CallbackContext callbackContext) {
-		if (mConnection == null) {
-			callbackContext.sendPluginResult(new PluginResult(
-					PluginResult.Status.ERROR));
-			return;
-		}
+    private void connectionStatus(CallbackContext callbackContext) {
+        if (mConnection == null) {
+            callbackContext.sendPluginResult(new PluginResult(
+                    PluginResult.Status.ERROR));
+            return;
+        }
+        String state = "";
+        switch (mConnection.getState()) {
+            case CONNECTED:
+                state = "open";
+                break;
+            case CONNECTING:
+                state = "connecting";
+                break;
+            case DISCONNECTED:
+                state = "closed";
+                break;
+            case PENDING:
+                state = "pending";
+                break;
+            default:
+                break;
 
-		JSONObject parameters = new JSONObject(mConnection.getParameters());
+        }
+
+        PluginResult result = new PluginResult(PluginResult.Status.OK,state);
+        callbackContext.sendPluginResult(result);
+    }
 
 
-		PluginResult result = new PluginResult(PluginResult.Status.OK,parameters);
-		callbackContext.sendPluginResult(result);
-	}
+    private void connectionParameters(CallbackContext callbackContext) {
+        if (mConnection == null) {
+            callbackContext.sendPluginResult(new PluginResult(
+                    PluginResult.Status.ERROR));
+            return;
+        }
+
+        JSONObject parameters = new JSONObject(mConnection.getParameters());
 
 
-	private void showNotification(JSONArray arguments, CallbackContext context) {
-		Context acontext = TCPlugin.this.webView.getContext();
-		NotificationManager mNotifyMgr =
-		        (NotificationManager) acontext.getSystemService(Activity.NOTIFICATION_SERVICE);
-		mNotifyMgr.cancelAll();
-		mCurrentNotificationText = arguments.optString(0);
+        PluginResult result = new PluginResult(PluginResult.Status.OK,parameters);
+        callbackContext.sendPluginResult(result);
+    }
 
 
-		PackageManager pm = acontext.getPackageManager();
+    private void showNotification(JSONArray arguments, CallbackContext context) {
+        Context acontext = TCPlugin.this.webView.getContext();
+        NotificationManager mNotifyMgr =
+                (NotificationManager) acontext.getSystemService(Activity.NOTIFICATION_SERVICE);
+        mNotifyMgr.cancelAll();
+        mCurrentNotificationText = arguments.optString(0);
+
+
+        PackageManager pm = acontext.getPackageManager();
         Intent notificationIntent = pm.getLaunchIntentForPackage(acontext.getPackageName());
         notificationIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
         notificationIntent.putExtra("notificationTag", "BVNotification");
 
-	    PendingIntent pendingIntent = PendingIntent.getActivity(acontext, 0, notificationIntent, 0);
-	    int notification_icon = acontext.getResources().getIdentifier("notification", "drawable", acontext.getPackageName());
-		NotificationCompat.Builder mBuilder =
-			    new NotificationCompat.Builder(acontext)
-				.setSmallIcon(notification_icon)
-			    .setContentTitle("Incoming Call")
-			    .setContentText(mCurrentNotificationText)
-			    .setContentIntent(pendingIntent);
-		mNotifyMgr.notify(mCurrentNotificationId, mBuilder.build());
+        PendingIntent pendingIntent = PendingIntent.getActivity(acontext, 0, notificationIntent, 0);
+        int notification_icon = acontext.getResources().getIdentifier("notification", "drawable", acontext.getPackageName());
+        NotificationCompat.Builder mBuilder =
+                new NotificationCompat.Builder(acontext)
+                        .setSmallIcon(notification_icon)
+                        .setContentTitle("Incoming Call")
+                        .setContentText(mCurrentNotificationText)
+                        .setContentIntent(pendingIntent);
+        mNotifyMgr.notify(mCurrentNotificationId, mBuilder.build());
 
-		context.success();
-	}
+        context.success();
+    }
 
-	private void cancelNotification(JSONArray arguments, CallbackContext context) {
-		NotificationManager mNotifyMgr =
-		        (NotificationManager) TCPlugin.this.webView.getContext().getSystemService(Activity.NOTIFICATION_SERVICE);
-		mNotifyMgr.cancel(mCurrentNotificationId);
-		context.success();
-	}
+    private void cancelNotification(JSONArray arguments, CallbackContext context) {
+        NotificationManager mNotifyMgr =
+                (NotificationManager) TCPlugin.this.webView.getContext().getSystemService(Activity.NOTIFICATION_SERVICE);
+        mNotifyMgr.cancel(mCurrentNotificationId);
+        context.success();
+    }
 
-	/**
-	 * 	Changes sound from earpiece to speaker and back
-	 *
-	 * 	@param mode	Speaker Mode
-	 * */
-	public void setSpeaker(JSONArray arguments, final CallbackContext callbackContext) {
-		Context context = cordova.getActivity().getApplicationContext();
-		AudioManager m_amAudioManager;
+    /**
+     * 	Changes sound from earpiece to speaker and back
+     *
+     * 	@param mode	Speaker Mode
+     * */
+    public void setSpeaker(JSONArray arguments, final CallbackContext callbackContext) {
+        Context context = cordova.getActivity().getApplicationContext();
+        AudioManager m_amAudioManager;
         m_amAudioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
         String mode = arguments.optString(0);
         if(mode.equals("on")) {
-        	Log.d("TCPlugin", "SPEAKER");
-        	m_amAudioManager.setMode(AudioManager.MODE_NORMAL);
-        	m_amAudioManager.setSpeakerphoneOn(true);
-					m_amAudioManager.setStreamVolume(
-						AudioManager.STREAM_VOICE_CALL,
-						m_amAudioManager.getStreamMaxVolume(AudioManager.STREAM_VOICE_CALL),
-						0);
+            Log.d("TCPlugin", "SPEAKER");
+            m_amAudioManager.setMode(AudioManager.MODE_NORMAL);
+            m_amAudioManager.setSpeakerphoneOn(true);
+            m_amAudioManager.setStreamVolume(
+                    AudioManager.STREAM_VOICE_CALL,
+                    m_amAudioManager.getStreamMaxVolume(AudioManager.STREAM_VOICE_CALL),
+                    0);
         }
         else {
-        	Log.d("TCPlugin", "EARPIECE");
-        	m_amAudioManager.setMode(AudioManager.MODE_IN_CALL);
-        	m_amAudioManager.setSpeakerphoneOn(false);
+            Log.d("TCPlugin", "EARPIECE");
+            m_amAudioManager.setMode(AudioManager.MODE_IN_CALL);
+            m_amAudioManager.setSpeakerphoneOn(false);
         }
-	}
+    }
 
-	// DeviceListener methods
+    // DeviceListener methods
 
-	@Override
-	public void onPresenceChanged(Device device, PresenceEvent presenceEvent) {
+    @Override
+    public void onPresenceChanged(Device device, PresenceEvent presenceEvent) {
 
-		 JSONObject object = new JSONObject();
-		 try {
-			 object.put("from", presenceEvent.getName());
-			 object.put("available",presenceEvent.isAvailable());
-		 } catch (JSONException e) {
-			 mInitCallbackContext.sendPluginResult(new
-					 PluginResult(PluginResult.Status.JSON_EXCEPTION));
-			 return;
-		 }
-		 javascriptCallback("onpresence", object,mInitCallbackContext);
+        JSONObject object = new JSONObject();
+        try {
+            object.put("from", presenceEvent.getName());
+            object.put("available",presenceEvent.isAvailable());
+        } catch (JSONException e) {
+            mInitCallbackContext.sendPluginResult(new
+                    PluginResult(PluginResult.Status.JSON_EXCEPTION));
+            return;
+        }
+        javascriptCallback("onpresence", object,mInitCallbackContext);
 
-	}
+    }
 
-	@Override
-	public void onStartListening(Device device) {
-		// What to do here? The JS library doesn't have an event for this.
+    @Override
+    public void onStartListening(Device device) {
+        // What to do here? The JS library doesn't have an event for this.
 
-	}
+    }
 
-	@Override
-	public void onStopListening(Device device) {
-		// TODO Auto-generated method stub
-		Log.d(TAG, "onStopListening");
-	}
+    @Override
+    public void onStopListening(Device device) {
+        // TODO Auto-generated method stub
+        Log.d(TAG, "onStopListening");
+    }
 
-	@Override
-	public void onStopListening(Device device, int errorCode,
-			String errorMessage) {
-		// this.javascriptErrorback(errorCode, errorMessage);
-		Log.d(TAG, "onStopListeningWithError");
-	}
+    @Override
+    public void onStopListening(Device device, int errorCode,
+                                String errorMessage) {
+        // this.javascriptErrorback(errorCode, errorMessage);
+        Log.d(TAG, "onStopListeningWithError");
+    }
 
-	@Override
-	public boolean receivePresenceEvents(Device device) {
-		return false;
-	}
+    @Override
+    public boolean receivePresenceEvents(Device device) {
+        return false;
+    }
 
-	// Twilio Init Listener methods
-	@Override
-	public void onError(Exception ex) {
-		Log.e(TAG, "Error Initializing Twilio: " + ex.getMessage(), ex);
+    // Twilio Init Listener methods
+    @Override
+    public void onError(Exception ex) {
+        Log.e(TAG, "Error Initializing Twilio: " + ex.getMessage(), ex);
 
-	}
+    }
 
-	@Override
-	public void onInitialized() {
-		Log.d(TAG, "Twilio Plugin Initialized");
-		deviceSetup(mInitDeviceSetupArgs, mInitCallbackContext);
-	}
+    @Override
+    public void onInitialized() {
+        Log.d(TAG, "Twilio Plugin Initialized");
+        deviceSetup(mInitDeviceSetupArgs, mInitCallbackContext);
+    }
 
-	// Twilio Connection Listener methods
-	@Override
-	public void onConnected(Connection connection) {
-		Log.d(TAG, "onConnected()");
-		fireDocumentEvent("onconnect");
-		if (connection.isIncoming()) {
-			fireDocumentEvent("onaccept");
-		}
+    // Twilio Connection Listener methods
+    @Override
+    public void onConnected(Connection connection) {
+        Log.d(TAG, "onConnected()");
+        fireDocumentEvent("onconnect");
+        if (connection.isIncoming()) {
+            fireDocumentEvent("onaccept");
+        }
 
-	}
+    }
 
-	@Override
-	public void onConnecting(Connection connection) {
-		Log.d(TAG, "onConnecting()");
-		// What to do here? The JS library doesn't have an event for connection
-		// negotiation.
+    @Override
+    public void onConnecting(Connection connection) {
+        Log.d(TAG, "onConnecting()");
+        // What to do here? The JS library doesn't have an event for connection
+        // negotiation.
 
-	}
+    }
 
-	@Override
-	public void onDisconnected(Connection connection) {
-		Log.d(TAG, "onDisconnected()");
-		fireDocumentEvent("ondevicedisconnect");
-		fireDocumentEvent("onconnectiondisconnect");
+    @Override
+    public void onDisconnected(Connection connection) {
+        Log.d(TAG, "onDisconnected()");
+        fireDocumentEvent("ondevicedisconnect");
+        fireDocumentEvent("onconnectiondisconnect");
 
-	}
+    }
 
-	@Override
-	public void onDisconnected(Connection connection, int errorCode, String errorMessage) {
-		// TODO: Pass error back
-		Log.d(TAG, "onDisconnected(): " + errorMessage);
-		onDisconnected(connection);
-	}
+    @Override
+    public void onDisconnected(Connection connection, int errorCode, String errorMessage) {
+        // TODO: Pass error back
+        Log.d(TAG, "onDisconnected(): " + errorMessage);
+        onDisconnected(connection);
+    }
 
-	// Plugin-to-Javascript communication methods
-	private void javascriptCallback(String event, JSONObject arguments,
-			CallbackContext callbackContext) {
-		if (callbackContext == null) {
-			return;
-		}
-		JSONObject options = new JSONObject();
-		try {
-			options.putOpt("callback", event);
-			options.putOpt("arguments", arguments);
-		} catch (JSONException e) {
-			callbackContext.sendPluginResult(new PluginResult(
-					PluginResult.Status.JSON_EXCEPTION));
-			return;
-		}
-		PluginResult result = new PluginResult(Status.OK, options);
-		result.setKeepCallback(true);
-		callbackContext.sendPluginResult(result);
+    // Plugin-to-Javascript communication methods
+    private void javascriptCallback(String event, JSONObject arguments,
+                                    CallbackContext callbackContext) {
+        if (callbackContext == null) {
+            return;
+        }
+        JSONObject options = new JSONObject();
+        try {
+            options.putOpt("callback", event);
+            options.putOpt("arguments", arguments);
+        } catch (JSONException e) {
+            callbackContext.sendPluginResult(new PluginResult(
+                    PluginResult.Status.JSON_EXCEPTION));
+            return;
+        }
+        PluginResult result = new PluginResult(Status.OK, options);
+        result.setKeepCallback(true);
+        callbackContext.sendPluginResult(result);
 
-	}
+    }
 
-	private void javascriptCallback(String event,
-			CallbackContext callbackContext) {
-		javascriptCallback(event, null, callbackContext);
-	}
+    private void javascriptCallback(String event,
+                                    CallbackContext callbackContext) {
+        javascriptCallback(event, null, callbackContext);
+    }
 
 
-	private void javascriptErrorback(int errorCode, String errorMessage, CallbackContext callbackContext) {
-		JSONObject object = new JSONObject();
-		try {
-			object.putOpt("message", errorMessage);
-		} catch (JSONException e) {
-			callbackContext.sendPluginResult(new PluginResult(
-					PluginResult.Status.JSON_EXCEPTION));
-			return;
-		}
-		PluginResult result = new PluginResult(Status.ERROR, object);
-		result.setKeepCallback(true);
-		callbackContext.sendPluginResult(result);
-	}
+    private void javascriptErrorback(int errorCode, String errorMessage, CallbackContext callbackContext) {
+        JSONObject object = new JSONObject();
+        try {
+            object.putOpt("message", errorMessage);
+        } catch (JSONException e) {
+            callbackContext.sendPluginResult(new PluginResult(
+                    PluginResult.Status.JSON_EXCEPTION));
+            return;
+        }
+        PluginResult result = new PluginResult(Status.ERROR, object);
+        result.setKeepCallback(true);
+        callbackContext.sendPluginResult(result);
+    }
 
-	private void fireDocumentEvent(String eventName) {
-		if (eventName != null) {
-			javascriptCallback(eventName,mInitCallbackContext);
-		}
-	}
+    private void fireDocumentEvent(String eventName) {
+        if (eventName != null) {
+            javascriptCallback(eventName,mInitCallbackContext);
+        }
+    }
 
-	@Override
-	public void onDestroy() {
-		super.onDestroy();
-		//lifecycle events
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        //lifecycle events
         if(mDevice != null){
             mDevice.release();
         }
-	}
+    }
 
 
-	public void onRequestPermissionResult(int requestCode, String[] permissions,
-										  int[] grantResults) throws JSONException
-	{
-		for(int r:grantResults)
-		{
-			if(r == PackageManager.PERMISSION_DENIED)
-			{
-				mInitCallbackContext.sendPluginResult(new PluginResult(PluginResult.Status.ERROR, "Permission denied"));
-				return;
-			}
-		}
-		switch(requestCode)
-		{
-			case RECORD_AUDIO_REQ_CODE:
-				initTwilio(mInitCallbackContext);
-				break;
-		}
-	}
+    public void onRequestPermissionResult(int requestCode, String[] permissions,
+                                          int[] grantResults) throws JSONException
+    {
+        for(int r:grantResults)
+        {
+            if(r == PackageManager.PERMISSION_DENIED)
+            {
+                mInitCallbackContext.sendPluginResult(new PluginResult(PluginResult.Status.ERROR, "Permission denied"));
+                return;
+            }
+        }
+        switch(requestCode)
+        {
+            case RECORD_AUDIO_REQ_CODE:
+                initTwilio(mInitCallbackContext);
+                break;
+        }
+    }
 
 
-    static boolean shouldShowNotification(Context context) {
+    private boolean shouldShowNotification(Context context) {
         ActivityManager.RunningAppProcessInfo myProcess = new ActivityManager.RunningAppProcessInfo();
         ActivityManager.getMyMemoryState(myProcess);
         if (myProcess.importance != ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND) {
             return true;
         }
 
-        // If the screen is off then the device has been locked
-		PowerManager powerManager = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
-		if (powerManager.isScreenOn() == false)
-		{
-			return true;
-		}
+
+        PowerManager powerManager = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
+        if ( Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT_WATCH ) {
+            Log.d(TAG, ">20");
+
+            DisplayManager dm = (DisplayManager) context.getSystemService(Context.DISPLAY_SERVICE);
+            for ( Display display : dm.getDisplays () ) {
+                Log.d(TAG, String.valueOf(display.getState()));
+                if ( display.getState () != Display.STATE_ON ) {
+                    return true;
+                }
+            }
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                Log.d(TAG, "idle + " + String.valueOf(powerManager.isDeviceIdleMode()));
+            }
+
+            if ( !powerManager.isInteractive() )
+            {
+                return true;
+            }
+        }
+        else
+        {
+            if ( !powerManager.isScreenOn() )
+            {
+                return true;
+            }
+        }
+
 
         KeyguardManager km = (KeyguardManager) context.getSystemService(Context.KEYGUARD_SERVICE);
         // app is foreground, but screen is locked, so show notification
@@ -680,12 +706,11 @@ public class TCPlugin extends CordovaPlugin implements DeviceListener,
     }
 
 
+
     private void showLocalNotification() {
-        Log.d(TAG, "showLocalNotification");
+        Log.d(TAG, "shouldShowNotification");
 
         Context acontext = TCPlugin.this.webView.getContext();
-        NotificationManager mNotifyMgr = (NotificationManager) acontext.getSystemService(Activity.NOTIFICATION_SERVICE);
-        mNotifyMgr.cancelAll();
 
         PackageManager pm = acontext.getPackageManager();
         Intent notificationIntent = pm.getLaunchIntentForPackage(acontext.getPackageName());
@@ -695,19 +720,22 @@ public class TCPlugin extends CordovaPlugin implements DeviceListener,
         int notification_icon = acontext.getResources().getIdentifier("icon", "drawable", acontext.getPackageName());
         int notificationID = 0;
 
-        NotificationCompat.Builder mBuilder = new NotificationCompat.Builder(acontext)
-            .setSmallIcon(notification_icon)
-            .setContentTitle("Glenda")
-            .setContentText("Incoming Call")
-            .setLights(Color.RED, 1, 1)
-            .setPriority(Notification.PRIORITY_HIGH)
-            .setContentIntent(pendingIntent);
+        // Build notification
+        Notification noti = new Notification.Builder(acontext)
+                .setContentTitle("Glenda")
+                .setContentText("Incoming call")
+                .setSmallIcon(notification_icon)
+                .setContentIntent(pendingIntent)
+                .setPriority(Notification.PRIORITY_HIGH)
+                .setLights(Color.RED, 1, 1)
+                .build();
+        NotificationManager notificationManager = (NotificationManager) acontext.getSystemService(Context.NOTIFICATION_SERVICE);
+        // hide the notification after its selected
+        noti.flags |= Notification.FLAG_AUTO_CANCEL;
+        noti.ledOnMS = 1000;
+        noti.ledOffMS = 1000;
+        //noti.sound = Uri.parse("android.resource://" + acontext.getPackageName() + "/raw/incoming");
 
-        Notification notification = mBuilder.build();
-        notification.sound = Uri.parse("android.resource://" + acontext.getPackageName() + "/raw/incoming");
-        notification.flags = Notification.FLAG_AUTO_CANCEL | Notification.FLAG_SHOW_LIGHTS;
-        notification.ledOnMS = 1000;
-        notification.ledOffMS = 1000;
-        mNotifyMgr.notify(notificationID, notification);
+        notificationManager.notify(notificationID, noti);
     }
 }
