@@ -282,21 +282,57 @@
 
 -(void)setSpeaker:(CDVInvokedUrlCommand*)command {
     NSString *mode = [command.arguments objectAtIndex:0];
+    // Get your app's audioSession singleton object
+    AVAudioSession *session = [AVAudioSession sharedInstance];
+
+    // Error handling
+    BOOL success;
+    NSError *error;
+
+    // set the audioSession category.
+    // Needs to be Record or PlayAndRecord to use audioRouteOverride:
+
+    success = [session setCategory:AVAudioSessionCategoryPlayAndRecord
+                             error:&error];
+
+    if (!success) {
+       NSLog(@"AVAudioSession error setting category:%@",error);
+    }
+
     if([mode isEqual: @"on"]) {
-        UInt32 audioRouteOverride = kAudioSessionOverrideAudioRoute_Speaker;
-        AudioSessionSetProperty (
-            kAudioSessionProperty_OverrideAudioRoute,
-            sizeof (audioRouteOverride),
-            &audioRouteOverride
-        );
+      // UInt32 audioRouteOverride = kAudioSessionOverrideAudioRoute_Speaker;
+      // AudioSessionSetProperty (
+      //     kAudioSessionProperty_OverrideAudioRoute,
+      //     sizeof (audioRouteOverride),
+      //     &audioRouteOverride
+      // );
+
+      // Set the audioSession override
+      success = [session overrideOutputAudioPort:AVAudioSessionPortOverrideSpeaker
+                                            error:&error];
+    } else {
+      // UInt32 audioRouteOverride = kAudioSessionOverrideAudioRoute_None;
+      // AudioSessionSetProperty (
+      //     kAudioSessionProperty_OverrideAudioRoute,
+      //     sizeof (audioRouteOverride),
+      //     &audioRouteOverride
+      // );
+
+      // Set the audioSession override
+      success = [session overrideOutputAudioPort:AVAudioSessionPortOverrideNone
+                                            error:&error];
+    }
+    if (!success) {
+        NSLog(@"AVAudioSession error overrideOutputAudioPort:%@",error);
+    }
+
+    // Activate the audio session
+    success = [session setActive:YES error:&error];
+    if (!success) {
+        NSLog(@"AVAudioSession error activating: %@",error);
     }
     else {
-        UInt32 audioRouteOverride = kAudioSessionOverrideAudioRoute_None;
-        AudioSessionSetProperty (
-            kAudioSessionProperty_OverrideAudioRoute,
-            sizeof (audioRouteOverride),
-            &audioRouteOverride
-        );
+         NSLog(@"AudioSession active");
     }
 }
 
