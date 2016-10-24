@@ -168,6 +168,9 @@ public class TCPlugin extends CordovaPlugin implements DeviceListener,
 		} else if ("reset".equals(action)) {
             reset();
             return true;
+        } else if("screenIsLocked".equals(action)){
+             screenIsLocked(callbackContext);
+             return true;
         }
 
 		return false;
@@ -350,6 +353,9 @@ public class TCPlugin extends CordovaPlugin implements DeviceListener,
 		callbackContext.success(String.valueOf(mConnection.isMuted()));
 	}
 
+    private void screenIsLocked(CallbackContext callbackContext) {
+        callbackContext.success("false");
+    }
 
 	private void deviceStatus(CallbackContext callbackContext) {
 		if (mDevice == null) {
