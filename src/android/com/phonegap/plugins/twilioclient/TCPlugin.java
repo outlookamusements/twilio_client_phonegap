@@ -83,12 +83,6 @@ public class TCPlugin extends CordovaPlugin implements DeviceListener,
             Log.d(TAG, "incoming intent received with connection: "+ mConnection.getState().name());
             String constate = mConnection.getState().name();
             if(constate.equals("PENDING")) {
-                Log.d(TAG, "PENDING");
-                // if application is in background show a Local Notifiaction
-                if (shouldShowNotification(TCPlugin.this.webView.getContext()))
-                {
-                    showLocalNotification();
-                }
                 TCPlugin.this.javascriptCallback("onincoming", mInitCallbackContext);
             }
         }
@@ -182,6 +176,9 @@ public class TCPlugin extends CordovaPlugin implements DeviceListener,
             return true;
         } else if ("reset".equals(action)) {
             reset();
+            return true;
+        }else if("screenIsLocked".equals(action)){
+            screenIsLocked(callbackContext);
             return true;
         }
 
@@ -363,6 +360,10 @@ public class TCPlugin extends CordovaPlugin implements DeviceListener,
 
     private void isConnectionMuted(CallbackContext callbackContext) {
         callbackContext.success(String.valueOf(mConnection.isMuted()));
+    }
+
+    private void screenIsLocked(CallbackContext callbackContext){
+        callbackContext.success(String.valueOf(shouldShowNotification(TCPlugin.this.webView.getContext())));
     }
 
 
