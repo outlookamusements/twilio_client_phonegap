@@ -283,7 +283,8 @@
 -(void)setSpeaker:(CDVInvokedUrlCommand*)command {
     NSString *mode = [command.arguments objectAtIndex:0];
     // Get your app's audioSession singleton object
-    AVAudioSession *session = [AVAudioSession sharedInstance];
+    AVAudioSession *session;
+    session = [AVAudioSession sharedInstance];
 
     // Error handling
     BOOL success;
@@ -300,30 +301,20 @@
     }
 
     if([mode isEqual: @"on"]) {
-      // UInt32 audioRouteOverride = kAudioSessionOverrideAudioRoute_Speaker;
-      // AudioSessionSetProperty (
-      //     kAudioSessionProperty_OverrideAudioRoute,
-      //     sizeof (audioRouteOverride),
-      //     &audioRouteOverride
-      // );
 
       // Set the audioSession override
       success = [session overrideOutputAudioPort:AVAudioSessionPortOverrideSpeaker
-                                            error:&error];
+                                           error:&error];
     } else {
-      // UInt32 audioRouteOverride = kAudioSessionOverrideAudioRoute_None;
-      // AudioSessionSetProperty (
-      //     kAudioSessionProperty_OverrideAudioRoute,
-      //     sizeof (audioRouteOverride),
-      //     &audioRouteOverride
-      // );
 
       // Set the audioSession override
       success = [session overrideOutputAudioPort:AVAudioSessionPortOverrideNone
-                                            error:&error];
+                                           error:&error];
     }
     if (!success) {
-        NSLog(@"AVAudioSession error overrideOutputAudioPort:%@",error);
+      NSLog(@"AVAudioSession error overrideOutputAudioPort:%@",error);
+    } else {
+      NSLog(@"successfully set AVAudioSessionPortOverride to %@ with error %@", mode, error);
     }
 
     // Activate the audio session
