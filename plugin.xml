@@ -39,10 +39,10 @@
                 target-dir="src/com/phonegap/plugins/twilioclient" />
          <source-file src="src/android/com/phonegap/plugins/twilioclient/TCPlugin.java"
                 target-dir="src/com/phonegap/plugins/twilioclient" />
-        <resource-file src="sdk/android/Resources/disconnect.wav" target-dir="res/raw"/>
-        <resource-file src="sdk/android/Resources/incoming.wav" target-dir="res/raw"/>
-        <resource-file src="sdk/android/Resources/outgoing.wav" target-dir="res/raw"/>
-        <resource-file src="sdk/android/Resources/lock_screen.xml" target-dir="res/layout"/>
+        <source-file src="sdk/android/Resources/disconnect.wav" target-dir="res/raw"/>
+        <source-file src="sdk/android/Resources/incoming.wav" target-dir="res/raw"/>
+        <source-file src="sdk/android/Resources/outgoing.wav" target-dir="res/raw"/>
+        <source-file src="sdk/android/Resources/lock_screen.xml" target-dir="res/layout"/>
         <dependency id="cordova-plugin-compat" version="^1.0.0" />
     </platform>
 
