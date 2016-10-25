@@ -18,6 +18,7 @@
             <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
             <uses-permission android:name="android.permission.RECORD_AUDIO" />
             <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+            <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
         </config-file>
         <config-file target="AndroidManifest.xml" parent="/manifest/application">
              <activity android:name="com.phonegap.plugins.twilioclient.IncomingConnectionActivity"  android:theme="@android:style/Theme.NoDisplay"/>
@@ -38,9 +39,10 @@
                 target-dir="src/com/phonegap/plugins/twilioclient" />
          <source-file src="src/android/com/phonegap/plugins/twilioclient/TCPlugin.java"
                 target-dir="src/com/phonegap/plugins/twilioclient" />
-        <source-file src="sdk/android/Resources/disconnect.wav" target-dir="res/raw"/>
-        <source-file src="sdk/android/Resources/incoming.wav" target-dir="res/raw"/>
-        <source-file src="sdk/android/Resources/outgoing.wav" target-dir="res/raw"/>
+        <resource-file src="sdk/android/Resources/disconnect.wav" target-dir="res/raw"/>
+        <resource-file src="sdk/android/Resources/incoming.wav" target-dir="res/raw"/>
+        <resource-file src="sdk/android/Resources/outgoing.wav" target-dir="res/raw"/>
+        <resource-file src="sdk/android/Resources/lock_screen.xml" target-dir="res/layout"/>
         <dependency id="cordova-plugin-compat" version="^1.0.0" />
     </platform>
 
