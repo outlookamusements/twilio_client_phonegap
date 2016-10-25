@@ -281,23 +281,59 @@
 }
 
 -(void)setSpeaker:(CDVInvokedUrlCommand*)command {
-    NSString *mode = [command.arguments objectAtIndex:0];
-    if([mode isEqual: @"on"]) {
-        UInt32 audioRouteOverride = kAudioSessionOverrideAudioRoute_Speaker;
-        AudioSessionSetProperty (
-            kAudioSessionProperty_OverrideAudioRoute,
-            sizeof (audioRouteOverride),
-            &audioRouteOverride
-        );
-    }
-    else {
-        UInt32 audioRouteOverride = kAudioSessionOverrideAudioRoute_None;
-        AudioSessionSetProperty (
-            kAudioSessionProperty_OverrideAudioRoute,
-            sizeof (audioRouteOverride),
-            &audioRouteOverride
-        );
-    }
+   NSString *mode = [command.arguments objectAtIndex:0];
+   BOOL success;
+   NSError *error;
+
+   // set the audioSession category.
+   // Needs to be Record or PlayAndRecord to use audioRouteOverride:
+
+   if([mode isEqual: @"on"]) {
+
+       NSLog(@"on");
+
+       // Set the audioSession override
+       success = [[AVAudioSession sharedInstance] setCategory:AVAudioSessionCategoryPlayAndRecord
+                                                  withOptions:AVAudioSessionCategoryOptionDefaultToSpeaker
+                                                        error: &error];
+       if (!success) {
+           NSLog(@"AVAudioSession error setting category:%@",error);
+       }
+
+       // Doubly force audio to come out of speaker
+       UInt32 audioRouteOverride = kAudioSessionOverrideAudioRoute_Speaker;
+       AudioSessionSetProperty (kAudioSessionProperty_OverrideAudioRoute, sizeof(audioRouteOverride), &audioRouteOverride);
+
+       // Force audio to come out of speaker
+       success = [[AVAudioSession sharedInstance] overrideOutputAudioPort:AVAudioSessionPortOverrideSpeaker error:nil];
+
+   } else {
+
+       success = [[AVAudioSession sharedInstance] setCategory:AVAudioSessionCategoryPlayAndRecord
+                                                       error:&error];
+
+       if (!success) {
+           NSLog(@"AVAudioSession error setting category:%@",error);
+       }
+
+       success = [[AVAudioSession sharedInstance] overrideOutputAudioPort:AVAudioSessionPortOverrideNone
+                                                                    error:&error];
+   }
+
+   if (!success) {
+     NSLog(@"AVAudioSession error overrideOutputAudioPort:%@",error);
+   } else {
+     NSLog(@"successfully set AVAudioSessionPortOverride to %@ with error %@", mode, error);
+   }
+
+   // Activate the audio session
+   success = [[AVAudioSession sharedInstance] setActive:YES error:&error];
+   if (!success) {
+       NSLog(@"AVAudioSession error activating: %@",error);
+   }
+   else {
+        NSLog(@"AudioSession active");
+   }
 }
 
 # pragma mark private methods
