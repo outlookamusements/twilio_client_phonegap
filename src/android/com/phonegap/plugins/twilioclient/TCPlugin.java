@@ -372,7 +372,16 @@ public class TCPlugin extends CordovaPlugin implements DeviceListener,
     private void screenIsLocked(CallbackContext callbackContext){
         Boolean showNotification = shouldShowNotification(TCPlugin.this.webView.getContext());
         if(showNotification){
-            wakeUpScreen();
+            cordova.getThreadPool().execute(new Runnable(){
+                public void run() {
+                    try {
+                        Thread.sleep(1000);
+                        wakeUpScreen();
+                    } catch (InterruptedException ex) {
+                        Log.e(TAG,"Exception: " + ex.getMessage(),ex);
+                    }
+                }
+            });
         }
         callbackContext.success(String.valueOf(showNotification));
     }
@@ -708,17 +717,10 @@ public class TCPlugin extends CordovaPlugin implements DeviceListener,
 
     private void wakeUpScreen(){
 
-       WindowManager mWindowManager = (WindowManager) TCPlugin.this.webView.getContext().getSystemService(Context.WINDOW_SERVICE);
-       View mView = LayoutInflater.from(TCPlugin.this.webView.getContext()).inflate(R.layout.lock_screen, null);
+       PowerManager mPowerManager = (PowerManager) TCPlugin.this.webView.getContext().getSystemService(Context.POWER_SERVICE);
 
-       WindowManager.LayoutParams mLayoutParams = new WindowManager.LayoutParams(
-               ViewGroup.LayoutParams.WRAP_CONTENT,
-               ViewGroup.LayoutParams.WRAP_CONTENT, 0, 0,
-               WindowManager.LayoutParams.TYPE_SYSTEM_OVERLAY,
-               WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED | WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON,
-               PixelFormat.RGBA_8888);
-
-       mWindowManager.addView(mView, mLayoutParams);
+       PowerManager.WakeLock mWakeLock = mPowerManager.newWakeLock(PowerManager.SCREEN_BRIGHT_WAKE_LOCK | PowerManager.ACQUIRE_CAUSES_WAKEUP, "tag");
+       mWakeLock.acquire();
    }
 
 
