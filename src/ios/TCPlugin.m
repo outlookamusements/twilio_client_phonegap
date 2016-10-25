@@ -22,6 +22,8 @@
 @property(atomic, strong)       UILocalNotification *ringNotification;
 @property(atomic, strong)       NSTimer      *timer;
 @property (nonatomic, assign)   NSInteger    *nbRepeats;
+@property(atomic, strong)       UILocalNotification *localNotification;
+
 
 -(void)javascriptCallback:(NSString *)event;
 -(void)javascriptCallback:(NSString *)event withArguments:(NSDictionary *)arguments;
@@ -35,6 +37,7 @@
 @synthesize callback   = _callback;
 @synthesize connection = _connection;
 @synthesize ringNotification = _ringNotification;
+@synthesize localNotification = _localNotification;
 
 
 # pragma mark device delegate method
@@ -44,6 +47,9 @@
 }
 
 -(void)device:(TCDevice *)device didReceiveIncomingConnection:(TCConnection *)connection {
+    // if application is in background show a Local Notifiaction
+    [self displayLocalNotification];
+    
     connection.delegate = self;
     self.connection = connection;
     [self javascriptCallback:@"onincoming"];
@@ -357,5 +363,27 @@
 
     [self.commandDelegate sendPluginResult:result callbackId:self.callback];
 }
+
+-(void)displayLocalNotification {
+    // if application is in background show a Local Notifiaction
+    UIApplicationState state = [[UIApplication sharedApplication] applicationState];
+    if (state == UIApplicationStateBackground || state == UIApplicationStateInactive)
+    {
+        @try {
+            [[UIApplication sharedApplication] cancelAllLocalNotifications];
+        }
+        @catch(NSException *exception) {
+            NSLog(@"Couldn't Cancel Notification");
+        }
+        
+        _localNotification = [[UILocalNotification alloc] init];
+        _localNotification.alertBody = @"Incoming call";
+        _localNotification.soundName = @"incoming.wav";
+        _localNotification.fireDate = [NSDate date];
+        
+        [[UIApplication sharedApplication] scheduleLocalNotification:_localNotification];
+    }
+}
+
 
 @end
