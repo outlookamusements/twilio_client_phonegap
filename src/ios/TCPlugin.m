@@ -303,13 +303,13 @@
     if([mode isEqual: @"on"]) {
 
       // Set the audioSession override
-      success = [session overrideOutputAudioPort:AVAudioSessionPortOverrideSpeaker
-                                           error:&error];
+      success = [[AVAudioSession sharedInstance] overrideOutputAudioPort:AVAudioSessionPortOverrideSpeaker
+                                                                   error:&error];
     } else {
 
       // Set the audioSession override
-      success = [session overrideOutputAudioPort:AVAudioSessionPortOverrideNone
-                                           error:&error];
+      success = [[AVAudioSession sharedInstance] overrideOutputAudioPort:AVAudioSessionPortOverrideNone
+                                                                   error:&error];
     }
     if (!success) {
       NSLog(@"AVAudioSession error overrideOutputAudioPort:%@",error);
