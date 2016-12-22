@@ -43,7 +43,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import android.view.WindowManager;
-import com.wirestorm.glenda.R;
+import com.californiapsychics.gabbie.R;
 
 import android.graphics.PixelFormat;
 import android.view.LayoutInflater;
